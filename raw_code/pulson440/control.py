@@ -71,7 +71,7 @@ def main(args):
             only be non-empty if return_data input flag is set to True.
     
     Raises:
-        ValueError if unrecognized mode is requested.
+        # TODO: Update w/ appropriate error cases.
     """
     logger.info('Starting radar data collection process...')
 
