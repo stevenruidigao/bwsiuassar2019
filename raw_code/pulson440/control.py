@@ -32,7 +32,7 @@ except Exception as e:
     print(e)
     logger = setup_logger(name=DEFAULT_LOGGER_NAME, config=DEFAULT_LOGGER_CONFIG)
 
-def parse_args(args, cmd_line):
+def parse_args(args):
     """Input argument parser.
     
     Args:
@@ -50,6 +50,13 @@ def parse_args(args, cmd_line):
     # TODO: Insert argument parser; recommend usage of argparse library,
     # https://docs.python.org/3.5/library/argparse.html)
     parsed_args = None
+    
+    # List of arguments needed
+    # settings_file
+    # scan_data_filename
+    # scan_count
+    # return_data
+    
     
     # Perform any needed additional checks and modifcation of parsed arguments
     # TODO: Insert appropriate code here
@@ -89,6 +96,15 @@ def main(args):
         # TODO: Insert appropriate code that connects to radar, gets user settings, sets radar 
         # configuration, commands appropriate collection, and returns the collected data
         
+        radar.connect()
+        radar.read_settings_file(settings_file=parsed_args.settings_file)
+        radar.set_radar_config()
+        if parsed_args.collect_mode == 'collect':
+            data = radar.collect(#Insert arguments)
+        elif parsed_args.collect_mode == 'quick':
+            data = radar.quick_look(# Insert arguments here)
+        else:
+            raise RuntimeError('Unrecognized collection mode {0}'.format(parsed_args.collect_mode))
         logger.info('Completed radar data collection process!')
 
     except Exception:
