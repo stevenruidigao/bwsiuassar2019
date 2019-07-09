@@ -356,8 +356,8 @@ class PulsON440:
         """Set radar configuration based on user settings.
         
         Returns:
-           ettatus_flag (int)
-                Status flag indicating success/failure of get configuration request. Any non-zero 
+           status_flag (int)
+                Status flag indicating success/failure of set configuration request. Any non-zero 
                 value is a failure.
         
         Raises:
