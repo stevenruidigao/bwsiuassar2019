@@ -49,14 +49,7 @@ def parse_args(args):
     # Define argument parser
     # TODO: Insert argument parser; recommend usage of argparse library,
     # https://docs.python.org/3.5/library/argparse.html)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("settings_file", type=str)
-    parser.add_argument("scan_data_filename", type=str)
-    parser.add_argument("scan_count", type=int)
-    parser.add_argument("return_data", type=bool)
-    parsed_args = parser.parse_args(args)
-    print(parsed_args)
+    parsed_args = None
     
     # List of arguments needed
     # settings_file
@@ -68,7 +61,7 @@ def parse_args(args):
     # Perform any needed additional checks and modifcation of parsed arguments
     # TODO: Insert appropriate code here
     if parsed_args is None:
-        logger.info("oops")
+        logger.info()
     
     return parsed_args
 
@@ -92,7 +85,7 @@ def main(args):
     # Parse input arguments
     parsed_args = parse_args(args)
     logger.debug('Input arguments are --> {0}'.format(parsed_args))
-    
+
     # Initialize output
     data = None
     
@@ -107,9 +100,9 @@ def main(args):
         radar.read_settings_file(settings_file=parsed_args.settings_file)
         radar.set_radar_config()
         if parsed_args.collect_mode == 'collect':
-            data = radar.collect()#Insert arguments)
+            data = radar.collect(#Insert arguments)
         elif parsed_args.collect_mode == 'quick':
-            data = radar.quick_look()# Insert arguments here)
+            data = radar.quick_look(# Insert arguments here)
         else:
             raise RuntimeError('Unrecognized collection mode {0}'.format(parsed_args.collect_mode))
         logger.info('Completed radar data collection process!')
