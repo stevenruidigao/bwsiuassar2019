@@ -50,15 +50,15 @@ def parse_args(args):
     # TODO: Insert argument parser; recommend usage of argparse library,
     # https://docs.python.org/3.5/library/argparse.html)
 
-    parser = argparse.ArgumentParser() # Creates a new parser using the argparse library
+    parser = argparse.ArgumentParser(description="This program allows us to collect data from the radar.") # Creates a new parser using the argparse library
     
     # The next four lines add the arguments that we listed as necessary and adds them to the parser along with their type
     # to tell the parser to look for them
-    parser.add_argument("settings_file", type=str) # Path name of the radar settings file
-    parser.add_argument("scan_data_filename", type=str) # Path name for the document that we want to save the data in
-    parser.add_argument("scan_count", type=int) # Number of scans that we want to take
-    parser.add_argument("collect_mode", type=str, default="collect") # Collection mode; quicklook or collect
-    parser.add_argument("--return_data", "--return", action="store_true") # Whether or not we want to return the data to save it in a variable; OPTIONAL
+    parser.add_argument("settings_file", type=str, help=" - path name of settings file, type str") # Path name of the radar settings file
+    parser.add_argument("scan_data_filename", type=str, help=" - path name of preferred doc to save scanned data, type str") # Path name for the document that we want to save the data in
+    parser.add_argument("scan_count", type=int, help=" - number of scans desired, type int") # Number of scans that we want to take
+    parser.add_argument("collect_mode", type=str, default="collect", help=" - collection mode, quicklook or collect") # Collection mode; quicklook or collect
+    parser.add_argument("--return_data", "--return", action="store_true", help=" - OPTIONAL, can return data to save in a variable") # Whether or not we want to return the data to save it in a variable; OPTIONAL
     parsed_args = parser.parse_args(args) # Go through args, find the arguments, and save them into parsed_args
 ##    print(parsed_args)
     
