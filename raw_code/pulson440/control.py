@@ -107,9 +107,9 @@ def main(args):
         radar.read_settings_file(settings_file=parsed_args.settings_file)
         radar.set_radar_config()
         if parsed_args.collect_mode == 'collect':
-            data = radar.collect()#Insert arguments)
+            data = radar.collect(scan_count=parsed_args.scan_count, scan_data_filename=parsed_args.scan_data_filename, return_data=parsed_args.return_data)#Insert arguments)
         elif parsed_args.collect_mode == 'quick':
-            data = radar.quick_look()# Insert arguments here)
+            data = radar.quick_look(scan_data_filename=parsed_args.scan_data_filename, return_data=parsed_args.return_data)
         else:
             raise RuntimeError('Unrecognized collection mode {0}'.format(parsed_args.collect_mode))
         logger.info('Completed radar data collection process!')
