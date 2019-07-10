@@ -54,7 +54,7 @@ def parse_args(args):
     parser.add_argument("settings_file", type=str)
     parser.add_argument("scan_data_filename", type=str)
     parser.add_argument("scan_count", type=int)
-    parser.add_argument("--return_data", action="store_true")
+    parser.add_argument("--return_data", "--return", action="store_true")
     parsed_args = parser.parse_args(args)
 ##    print(parsed_args)
     
