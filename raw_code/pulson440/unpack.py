@@ -16,16 +16,21 @@ if Path('..//').resolve().as_posix() not in sys.path:
 # Import required modules and methods
 import argparse
 from common.constants import SPEED_OF_LIGHT
-from common.helper_functions import is_valid_file
+from common.helper_functions import is_valid_file, deconflict_file
+from math import floor
+from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib.pyplot as plt
 from matplotlib.ticker import Formatter
 import numpy as np
-import os
 import pickle
 from pulson440.formats import MRM_GET_CONFIG_CONFIRM
 from pulson440.constants import T_BIN, DT_0, MAX_SCAN_INFO_PACKET_SIZE, DEFAULT_CONFIG, BYTE_ORDER
+from scipy.signal import hilbert
 
-class value_formatter(Formatter):
+# Defaults
+DEFAULT_NUM_CPI_PULSES = 32
+
+class ValueFormatter(Formatter):
     """Tick label formatter class specific to formatting range/range bin and time/pulse number ticks 
     for displaying RTIs.
     """
@@ -163,6 +168,119 @@ def unpack(scan_data_filename):
         
         return data
 
+def generate_range_doppler(data, num_pulses_per_cpi=DEFAULT_NUM_CPI_PULSES, keep_clutter=False):
+    """Generate range-Doppler images from scan data.
+    
+    Args:
+        data (dict)
+            Data unpacked from the scan data file.
+        
+        num_pulses_per_cpi (int)
+            Number of pulses to use in each CPI. Defaults to 32.
+            
+        keep_clutter (bool)
+            Indicates whether or not to keep the clutter (zero Doppler) ridge. Defaults to False.
+            
+    Returns:
+        range_doppler (list)
+            Range-Doppler image for each CPI.
+            
+        doppler_bins (ndarray)
+            Doppler bin values (Hz).
+            
+        cpi_timestamps (ndarray)
+            Start timestamp of each CPI since first pulse.
+            
+    Raises:
+        IndexError if number of pulses per CPI exceeds total number of pulses.
+    """
+    # Check if reqeuested number of pulses per CPI exceed total number of pulses
+    if num_pulses_per_cpi > data['pulse_idx'].size:
+        raise IndexError('{0} pulses per CPI requested; exceeds {1} total pulses!'.format(
+                num_pulses_per_cpi, data['pulse_idx'].size))
+    
+    # Determine coarse Doppler bins
+    doppler_bins = (np.arange(-num_pulses_per_cpi / 2, num_pulses_per_cpi / 2 - 1) / 
+                    (np.mean(np.diff(data['timestamps'] / 1000)) * num_pulses_per_cpi))
+    
+    # Convert to I/Q using Hilbert transform
+    iq_data = hilbert(data['scan_data'], axis=1)
+    
+    # Compute range-Doppler for each CPI
+    num_cpi = floor(data['pulse_idx'].size / num_pulses_per_cpi)
+    cpi_pulse_idx = np.arange(num_pulses_per_cpi)
+    range_doppler = [None] * num_cpi
+    cpi_timestamps = np.zeros(num_cpi)
+    for ii in range(num_cpi):
+        start_pulse_idx = ii * num_pulses_per_cpi
+        cpi_timestamps[ii] = data['timestamps'][start_pulse_idx]
+        range_doppler[ii] = np.fft.fft(iq_data[start_pulse_idx + cpi_pulse_idx, :], axis=0)
+        range_doppler[ii] = np.abs(range_doppler[ii])
+        
+        # Zero clutter if requested
+        if not keep_clutter:
+            range_doppler[ii][0, :] = 0
+        
+        # Set 0 Hz as center of Doppler axis
+        range_doppler[ii] = np.transpose(np.fft.fftshift(range_doppler[ii], axes=0))
+        
+    cpi_timestamps -= cpi_timestamps[0]
+    return range_doppler, doppler_bins, cpi_timestamps
+
+class RangeDopplerPlot:
+    """Class for animating range-Doppler plot."""
+    
+    def __init__(self, range_doppler, cpi_timestamps, range_formatter, doppler_formatter):
+        """Initialization method."""
+        # Raw data
+        self.range_doppler = range_doppler
+        self.cpi_timestamps = cpi_timestamps
+        
+        # Determine min-max valus
+        self.min_val = float('inf')
+        self.max_val = float('-inf')
+        for ii in range(len(range_doppler)):
+            self.range_doppler[ii] = 20 * np.log10(range_doppler[ii])
+            min_val = np.amin(self.range_doppler[ii][self.range_doppler[ii] != float('-inf')])
+            max_val = np.amax(self.range_doppler[ii][self.range_doppler[ii] != float('-inf')])
+            if min_val < self.min_val:
+                self.min_val = min_val
+            if max_val > self.max_val:
+                self.max_val = max_val
+                
+        # Initialize plot
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.img = self.ax.imshow(range_doppler[ii], vmin=self.min_val, vmax=self.max_val, 
+                                 aspect='auto')
+        self.ax.set_title('Range-Doppler Images - CPI: #{0}, Times Elapsed: {1} (s)'.format(0, 
+                          self.cpi_timestamps[0] / 1000))
+        self.ax.set_xlabel('Doppler Frequency (Hz) [Doppler Bin Number]')
+        self.ax.set_ylabel('Range (m) [Range Bin Number]')
+        self.ax.xaxis.set_major_formatter(doppler_formatter)
+        self.ax.yaxis.set_major_formatter(range_formatter)
+        self.cbar = self.fig.colorbar(self.img)
+        self.cbar.ax.set_ylabel('dB')
+        self.anim = None
+        
+    def _update(self, ii):
+        """Update plot method."""
+        self.img.set_data(self.range_doppler[ii])
+        self.ax.set_title('Range-Doppler Images - CPI: #{0}, Time Elapsed: {1} (s)'.format(ii, 
+                          self.cpi_timestamps[ii] / 1000))
+        plt.draw()
+            
+    def start(self):
+        """Start range-Doppler plot animation."""
+        self.anim = FuncAnimation(self.fig, self._update, len(self.range_doppler),
+                                  interval=500, repeat=True)
+        plt.draw()
+        plt.show()
+    
+    def save(self, filename):
+        """Save animation to file."""
+        self.anim.save(filename, writer=PillowWriter(fps=2))
+        
 def parse_args(args):
     """Input argument parser.
     
@@ -180,7 +298,14 @@ def parse_args(args):
                         help=('Path and name of file to which data will be saved to; defaults to ' +
                               'not saving it'))
     parser.add_argument('-v', '--visualize', action='store_true', 
-                        help='Plot RTI of unpacked data; will block computation')
+                        help='Plot RTI and range-Doppler of unpacked data; will block computation')
+    parser.add_argument('--num_pulses_per_cpi', type=int, nargs='?', const=DEFAULT_NUM_CPI_PULSES, 
+                        default=DEFAULT_NUM_CPI_PULSES, 
+                        help=(('Number of pulses to use per CPI in generating range-Doppler ' + 
+                               'maps; defaults to {0}').format(DEFAULT_NUM_CPI_PULSES)))
+    parser.add_argument('--keep_clutter', action='store_true', 
+                        help=('Keep clutter ridge (0 Hz Doppler) in range-Doppler images. Only ' + 
+                              'applies if visualize flag is set; defaults to False'))
     parsed_args = parser.parse_args(args)
     
     # Check if files are accessible
@@ -197,46 +322,75 @@ def main(args):
             Input arguments as taken from command line execution via sys.argv[1:].
     
     Returns:
-        scan_data (dict)
-            Scan data unpacked from the scan data file.
+        data (dict)
+            Data unpacked from the scan data file.
     """
     # Parse input arguments
     args = parse_args(args)
     
     # Unpack log file
-    scan_data = unpack(args.scan_data_filename)
+    data = unpack(args.scan_data_filename)
     
     # Save (pickle) unpacked data if requested
     if args.unpacked_data_filename:
         with open(args.unpacked_data_filename, 'wb') as f:
-            pickle.dump(scan_data, f)
-
-    # Visualize RTI of unpacked data
+            pickle.dump(data, f)
+    
+    # Visualize data as RTI and range-Doppler
     plt.ioff()
     if args.visualize:
-        range_formatter = value_formatter(scan_data['range_bins'])
-        pulse_formatter = value_formatter((scan_data['timestamps'] - scan_data['timestamps'][0]) / 
-                                          1000)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        h_img = ax.imshow(20 * np.log10(np.abs(scan_data['scan_data'])))
-        ax.set_aspect('auto')
-        ax.set_title('Range-Time Intensity')
-        ax.set_xlabel('Range (m) [Range Bin Number]')
-        ax.set_ylabel('Time Elapsed (s) [Pulse Number]')
-        ax.xaxis.set_major_formatter(range_formatter)
-        ax.yaxis.set_major_formatter(pulse_formatter)
-        cbar = fig.colorbar(h_img)
+        
+        # Extract range-Doppler images
+        range_doppler, doppler_bins, cpi_timestamps = \
+            generate_range_doppler(data, num_pulses_per_cpi=args.num_pulses_per_cpi, 
+                                   keep_clutter=args.keep_clutter)
+        
+        # Set up formatters
+        range_formatter = ValueFormatter(data['range_bins'])
+        pulse_formatter = ValueFormatter((data['timestamps'] - data['timestamps'][0]) / 1000)
+        doppler_formatter = ValueFormatter(doppler_bins)
+        
+        # Plot RTI
+        rti_fig = plt.figure()
+        rti_ax = rti_fig.add_subplot(111)
+        h_img = rti_ax.imshow(20 * np.log10(np.abs(data['scan_data'])))
+        rti_ax.set_aspect('auto')
+        rti_ax.set_title('Range-Time Intensity')
+        rti_ax.set_xlabel('Range (m) [Range Bin Number]')
+        rti_ax.set_ylabel('Time Elapsed (s) [Pulse Number]')
+        rti_ax.xaxis.set_major_formatter(range_formatter)
+        rti_ax.yaxis.set_major_formatter(pulse_formatter)
+        cbar = rti_fig.colorbar(h_img)
         cbar.ax.set_ylabel('dB')
         
         # Try to display to screen if available otherwise save to file
-        try:
-            plt.show()
-        except:
-            plt.savefig('%s.png' % os.path.splitext(args.file)[0])
-            
+        plt.ion()
+        plt.show()
+        if args.unpacked_data_filename:
+            rti_filename = Path(args.unpacked_data_filename)
+            rti_filename = rti_filename.with_name('{0}.png'.format(rti_filename.stem))
+        else:
+            rti_filename = Path('RTI.png')
+        rti_filename = deconflict_file(rti_filename)
+        plt.savefig(rti_filename)
+        input('Press [enter] to continue.')
+        
+        # Plot range-Doppler
+        if args.unpacked_data_filename:
+            range_doppler_filename = Path(args.unpacked_data_filename)
+            range_doppler_filename = range_doppler_filename.with_name('{0}.gif'.format(
+                    range_doppler_filename.stem))
+        else:
+            range_doppler_filename = Path('range_doppler.gif')
+        range_doppler_filename = deconflict_file(range_doppler_filename)
+        rd_plot = RangeDopplerPlot(range_doppler, cpi_timestamps, range_formatter, 
+                                   doppler_formatter)
+        rd_plot.start()
+        rd_plot.save(range_doppler_filename)
+        input('Press [enter] to continue.')
+        
     # Return unpacked scan_data
-    return scan_data
+    return data
 
 if __name__ == "__main__":
     """Standard Python alias for command line execution."""
