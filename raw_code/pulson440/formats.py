@@ -163,3 +163,36 @@ MRM_SCAN_INFO = {'message_type': 61953, # Message type
                          ('scan_data', np.dtype(np.int32))])} # Scan data
 MRM_SCAN_INFO['packet_length'] = sum( # Packet length (bytes))
         [value.itemsize for value in MRM_SCAN_INFO['packet_def'].values()])
+
+MRM_GET_STATUSINFO_REQUEST = {'message_type': 61441, # Message type
+                      'packet_def': OrderedDict([
+                              ('message_type', [np.dtype(np.uint16), None]), # Message type
+                              ('message_id', [np.dtype(np.uint16), None])])} # Message ID
+MRM_GET_STATUSINFO_REQUEST['packet_length'] = sum( # Packet length (bytes))
+        [value[0].itemsize for value in MRM_GET_STATUSINFO_REQUEST['packet_def'].values()])
+
+# Radar Status Confirmation; radar to host
+MRM_GET_STATUSINFO_CONFIRM = {'message_type': 61697, # Message type
+                          'packet_def': OrderedDict([
+                                  ('message_type', np.dtype(np.uint16)), # Message type
+                                  ('message_id', np.dtype(np.uint16)), # Message ID
+                                  ('mrm_version_major', np.dtype(np.uint8)), # MRM embedded major version number
+                                  ('mrm_version_minor', np.dtype(np.int8)), # MRM embedded minor version number
+                                  ('mrm_version_build', np.dtype(np.int16)), # MRM embedded build version number
+                                  ('uwb_kernel_major', np.dtype(np.uint8)), # Kernel code major version number
+                                  ('uwb_kernel_minor', np.dtype(np.uint8)), # Kernel code minor version number
+                                  ('uwb_kernel_build', np.dtype(np.uint16)), # Kernel code build version number
+                                  ('firmware_version', np.dtype(np.uint8)), # Firmware version number; hexadecimal
+                                  ('firmware_year', np.dtype(np.uint8)), # Encoded firmware year; (year >> 4)*10+(year % 16)
+                                  ('firmware_month', np.dtype(np.uint8)), # Encoded firmware month; same as year to get the decimal value
+                                  ('firmware_day', np.dtype(np.uint8)), # Encoded firmware day; same as year
+                                  ('serial_num', np.dtype(np.uint32)), # Device serial number; hexadecimal
+                                  ('board_revision', np.dtype(np.uint8)), # PCB revision; single ASCII char
+                                  ('bit_test', np.dtype(np.uint8)), # Built in test result; BIT FAILURE IF NON-ZERO
+                                  ('board_type', np.dtype(np.uint8)), # 1-P400; 2-P410
+                                  ('config', np.dtype(np.uint8)), # Transmitter config; 1-FCC compliant
+                                  ('temp', np.dtype(np.uint8)), # Temperature; divide by 4 to get degrees C
+                                  ('package_version', np.dtype(np.int32)), # Readable package release version
+                                  ('status', np.dtype(np.uint32))])} # Status; 0 is successful
+MRM_GET_STATUSINFO_CONFIRM['packet_length'] = sum( # Packet length (bytes))
+        [value.itemsize for value in MRM_GET_STATUSINFO_CONFIRM['packet_def'].values()])
