@@ -32,7 +32,7 @@ from pulson440.constants import BYTE_ORDER, DEFAULT_SETTINGS, DEFAULT_CONFIG, MA
     T_BIN, DN_BIN, SEG_NUM_BINS, UDP_IP_HOST, UDP_IP_RADAR, UDP_PORT_RADAR, REC_SCAN_RES, \
     REC_PERSIST_FLAG
 from pulson440.formats import MRM_CONTROL_CONFIRM, MRM_CONTROL_REQUEST, MRM_GET_CONFIG_CONFIRM, \
-    MRM_GET_CONFIG_REQUEST, MRM_SET_CONFIG_CONFIRM, MRM_SET_CONFIG_REQUEST
+    MRM_GET_CONFIG_REQUEST, MRM_SET_CONFIG_CONFIRM, MRM_SET_CONFIG_REQUEST, MRM_GET_STATUSINFO_REQUEST, MRM_GET_STATUSINFO_CONFIRM
 import socket
 import time
 import yaml
@@ -685,4 +685,49 @@ class PulsON440:
             raise RuntimeError('Radar not connected or is already collecting data!')
             
         return scan_data
+    
+        def status_check(self):
+        """ Determines the status of the radar.
+
+        Args:
+            None
+        
+        Raises a runtime error if the radar is connected but the status returns are incorrect
+        Returns false if the radar is not connected
+        Returns true if the radar is connected and the status returns are correct
+        
+        """
+        self.logger.info('Requesting radar status...')
+        # Make sure radar is connected
+        if self.connected:
+            # Request the current radar status
+            payload = {}
+            message = self.encode_host_to_radar_message(payload, MRM_GET_STATUSINFO_REQUEST)
+            self.connection['sock'].sendto(message,
+                                           (self.connection['udp_ip_radar'], self.connection['udp_port_radar']))
+
+            # Try to receive the status of the radar
+            start = time.time()
+            status_flag = -1
+            bit_test_flag = -1
+            while (time.time() - start) < self.settings['set_config_timeout']: # Config Timeout used because there isn't a status timout
+                try:
+                    message, addr = self.connection['sock'].recvfrom(MAX_PACKET_SIZE)
+                    payload = self.decode_radar_to_host_message(message, MRM_GET_STATUSINFO_CONFIRM)
+                    status_flag = payload['status']
+                    bit_test_flag = payload['bit_test']
+                    break
+                except:
+                    pass
+            if status_flag == -1 and bit_test_flag == -1:
+                raise RuntimeError('Radar status request timed out.')
+            elif status_flag != 0:
+                raise RuntimeError(('Status non-zero with the value ' +
+                                    '{0}!').format(status_flag))
+            elif bit_test_flag != 0:
+                raise RuntimeError(('BIT Test non-zero with the value ' +
+                                    '{0}!').format(bit_test_flag))
+            self.logger.info('Radar in full working order!')
+            return True
+        return None
         
