@@ -127,6 +127,7 @@ def deconflict_file(filename):
     """
     filename = Path(filename)
     if not filename.exists():
+        filename.touch()
         return filename.resolve().as_posix()
     else:
         ii = 0
