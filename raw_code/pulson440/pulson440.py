@@ -290,7 +290,7 @@ class PulsON440:
         """
         # Try to disconnect from radar if needed
         if not self.connected:
-            self.logger.info('Cnnnot disconnect, no radar connected!')
+            self.logger.info('Cannnot disconnect, no radar connected!')
         else:
             self.logger.info('Trying to disconnect from radar...')
             try:
@@ -686,7 +686,7 @@ class PulsON440:
             
         return scan_data
     
-        def status_check(self):
+    def status_check(self):
         """ Determines the status of the radar.
 
         Args:
