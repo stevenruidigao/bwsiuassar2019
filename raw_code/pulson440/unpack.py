@@ -386,7 +386,7 @@ def main(args):
         rd_plot = RangeDopplerPlot(range_doppler, cpi_timestamps, range_formatter, 
                                    doppler_formatter)
         rd_plot.start()
-        rd_plot.save(range_doppler_filename)
+        # rd_plot.save(range_doppler_filename)
         input('Press [enter] to continue.')
         
     # Return unpacked scan_data
