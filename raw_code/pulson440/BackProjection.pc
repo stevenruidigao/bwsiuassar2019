@@ -1,4 +1,4 @@
-back_projection(x-input vector):
+back_projection(x-input vector, y-platform position, z-pulse time):
   align pulse data
   matched filtering (write as sep func)
   add value at t to sigma dict
