@@ -716,17 +716,18 @@ class PulsON440:
                     payload = self.decode_radar_to_host_message(message, MRM_GET_STATUSINFO_CONFIRM)
                     status_flag = payload['status']
                     bit_test_flag = payload['bit_test']
+                    print(status_flag, bit_test_flag)
                     break
                 except:
                     pass
             if status_flag == -1 and bit_test_flag == -1:
                 raise RuntimeError('Radar status request timed out.')
-            elif status_flag != 0:
-                raise RuntimeError(('Status non-zero with the value ' +
-                                    '{0}!').format(status_flag))
-            elif bit_test_flag != 0:
-                raise RuntimeError(('BIT Test non-zero with the value ' +
-                                    '{0}!').format(bit_test_flag))
+##            elif status_flag != 0:
+##                raise RuntimeError(('Status non-zero with the value ' +
+##                                    '{0}!').format(status_flag))
+##            elif bit_test_flag != 0:
+##                raise RuntimeError(('BIT Test non-zero with the value ' +
+##                                    '{0}!').format(bit_test_flag))
             self.logger.info('Radar in full working order!')
             return True
         return None

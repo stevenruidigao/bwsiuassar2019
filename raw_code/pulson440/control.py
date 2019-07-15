@@ -60,7 +60,7 @@ def parse_args(args):
     parser.add_argument("--scan_count", type=int, default=None, help=" - number of scans desired, type int") # Number of scans that we want to take
     parser.add_argument("--collect_mode", type=str, default="collect", help=" - collection mode, quicklook or collect") # Collection mode; quicklook or collect
     parser.add_argument("--return_data", "--return", action="store_true", help=" - OPTIONAL, can return data to save in a variable") # Whether or not we want to return the data to save it in a variable; OPTIONAL
-    parser.add_argument("--status-check", action="store_false", help=" - runs a status check on the radar")
+    parser.add_argument("--status-check", type=bool, default=True, help=" - runs a status check on the radar")
     parsed_args = parser.parse_args(args) # Go through args, find the arguments, and save them into parsed_args
     
     # List of arguments needed
@@ -112,8 +112,8 @@ def main(args):
         radar.connect()
         radar.read_settings_file(settings_file=parsed_args.settings_file)
         radar.set_radar_config()
-        if parsed_args.status_check:
-            radar.status_check()
+        if parsed_args.status_check and radar.status_check():
+            print("Radar is OK!")
         if parsed_args.collect_mode == "collect":
             if parsed_args.scan_count == None:
                 data = radar.collect(scan_data_filename=deconflict_file(parsed_args.scan_data_filename), return_data=parsed_args.return_data)
