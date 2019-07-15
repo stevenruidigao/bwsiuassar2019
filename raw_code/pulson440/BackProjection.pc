@@ -1,13 +1,15 @@
 back_projection(x-input vector, y-platform position, z-pulse time):
-  align pulse data
-  matched filtering (write as sep func)
-  add value at t to sigma dict
-
-
-For iteration, nested for-loops with the back_projection call inside of it changing the x and y values of the input vector
+  Use pythagorean theorum to find distance between the platform and the point 
+  Use the range to time function to find the time shift between the pulse and the return
+  Shift the return pulses by the time that the signal takes to travel to line up portions of the waves
+  set value equal to matched_filtering (shifted pulses, original pulse, t)
+  add value to sigma dictionary
   
   
+matched_filtering(pulses-list of all the return pulses, org-outputted pulse, t-return time):
+  Multiply the original pulse by each of the other pulses
+  Sum each equivalent pulse on the seperate waveforms 
+  return the value at t
   
-  
-  
+In order to iterate over all of the x and y pairs in the system, use two nested for loops with a back projection call inside of the second
   
