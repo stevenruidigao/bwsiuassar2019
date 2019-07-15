@@ -1,1 +1,13 @@
-Spaceholder
+back_projection(x-input vector):
+  align pulse data
+  matched filtering (write as sep func)
+  add value at t to sigma dict
+
+
+For iteration, nested for loops with the back_projection call inside of it changing the x and y values of the input vector
+  
+  
+  
+  
+  
+  
