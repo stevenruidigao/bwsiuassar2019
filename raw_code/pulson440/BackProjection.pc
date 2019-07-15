@@ -4,7 +4,7 @@ back_projection(x-input vector):
   add value at t to sigma dict
 
 
-For iteration, nested for loops with the back_projection call inside of it changing the x and y values of the input vector
+For iteration, nested for-loops with the back_projection call inside of it changing the x and y values of the input vector
   
   
   
