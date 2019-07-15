@@ -194,7 +194,6 @@ MRM_GET_STATUSINFO_CONFIRM = {'message_type': 61697, # Message type
                                   ('config', np.dtype(np.uint8)), # Transmitter config; 1-FCC compliant
                                   ('temp', np.dtype(np.uint8)), # Temperature; divide by 4 to get degrees C
                                   ('package_version', np.dtype(np.unicode_)), # Readable package release version
-                                  ('package_version', np.dtype(np.int32)), # Readable package release version
                                   ('status', np.dtype(np.uint32))])} # Status; 0 is successful
 MRM_GET_STATUSINFO_CONFIRM['packet_length'] = sum( # Packet length (bytes))
         [value.itemsize for value in MRM_GET_STATUSINFO_CONFIRM['packet_def'].values()])
