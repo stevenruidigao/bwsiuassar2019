@@ -164,6 +164,7 @@ MRM_SCAN_INFO = {'message_type': 61953, # Message type
 MRM_SCAN_INFO['packet_length'] = sum( # Packet length (bytes))
         [value.itemsize for value in MRM_SCAN_INFO['packet_def'].values()])
 
+# Radar status request; host to radar
 MRM_GET_STATUSINFO_REQUEST = {'message_type': 61441, # Message type
                       'packet_def': OrderedDict([
                               ('message_type', [np.dtype(np.uint16), None]), # Message type
