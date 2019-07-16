@@ -46,13 +46,19 @@ for x pixels:
 
 
 
-def bad_projection():
-
+def bad_projection(final, range_bins, scan_data):
 
 #origin:stackoverflow - ryan
 #returns the range bin which "range" is closest to
-ind=(np.abs(range_bins - range)).armgmin()
-range_bins[ind]
+    total_sum=0
+    for range in final:
+        for y in scan_data:
+            ind=(np.abs(range_bins - range)).armgmin()
+            range_bins[ind]
+            total_sum= total_sum + scan_data.[ind,y]
+           
+            
+        ##scan_data[ind,1]+scan_data[ind,2]... need to sum all of these values
 
 
 
