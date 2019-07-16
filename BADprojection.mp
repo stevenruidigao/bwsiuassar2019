@@ -17,6 +17,7 @@ with open('2Points_1way_data.pkl', 'rb') as f:
 abs_val_img = np.abs(data['scan_data'])
 plt.imshow(abs_val_img)
 '''
+'''
 def test_dist(platform_pos):
     for trip in platform_pos:
         dist = dist_form(trip[0], trip[1], trip[2])
@@ -32,7 +33,7 @@ slow_time = range(1, final_len)
 plt.plot(final[:99], slow_time)
 plt.axis([15, 17, 0, 100])
 plt.show()
-
+'''
 numpy.inter can help collapse the for loops so it can be faster
 
 for x pixels:
@@ -42,6 +43,21 @@ for x pixels:
             find_nearest_range
             imgt = scan_nearest_range
 '''
+
+
+
+def bad_projection():
+
+
+#origin:stackoverflow - ryan
+#returns the range bin which "range" is closest to
+ind=(np.abs(range_bins - range)).armgmin()
+range_bins[ind]
+
+
+
+
+
 
 PSEUDOCODE ---
 def backprojection:
