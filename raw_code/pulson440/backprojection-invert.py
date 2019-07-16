@@ -9,19 +9,18 @@ def backprojection(data):
     xlen = 120
     ylen = 120
     return_data = np.zeros((xlen, ylen))
-    pixel_x = -1
-    for x in np.linspace(-3, 3, xlen):
-        pixel_x += 1
-        pixel_y = -1 
-        for y in np.linspace(-3, 3, ylen):
-            pixel_y += 1
-            for scan_number in range(len(platform_pos)):
+    for scan_number in range(len(platform_pos)):
+        pixel_x = -1
+        for x in np.linspace(-3, 3, xlen):
+            pixel_x += 1
+            pixel_y = -1 
+            for y in np.linspace(-3, 3, ylen):
+                pixel_y += 1
                 pos = platform_pos[scan_number]
                 distance = (np.sum(np.square(np.array([y, -x, 0]) - pos))) ** (1 / 2)
                 range_bin = (np.abs(range_bins - distance)).argmin()
                 return_data[pixel_x, pixel_y] += scan_data[scan_number][range_bin]
-            return_data[pixel_x, pixel_y] = abs(return_data[pixel_x, pixel_y])
-    return return_data
+    return abs(return_data)
 
 with open('Mandrill_1way_data.pkl', 'rb') as f:
     data = pickle.load(f)
