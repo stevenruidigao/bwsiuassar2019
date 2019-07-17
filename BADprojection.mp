@@ -45,20 +45,37 @@ for x pixels:
 '''
 
 
+import pickle
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+with open('Mandrill_1way_data.pkl', 'rb') as f:
+    data=pickle.load(f)
 
-def bad_projection(final, range_bins, scan_data):
+def backprojection(pulses, range_bins, platform_pos, x_vec, y_vec, z_offset=0):
+    num_pulses=pulses.shape[0]
+    num_x_coords=len(x_vec)
+    num_y_coords=len(y_vec)
+    complex_image=np.zeros((num_y_coords, num_x_coords), dtype=np.complex)
 
-#origin:stackoverflow - ryan
-#returns the range bin which "range" is closest to
-    total_sum=0
-    for range in final:
-        for y in scan_data:
-            ind=(np.abs(range_bins - range)).armgmin()
-            range_bins[ind]
-            total_sum= total_sum + scan_data.[ind,y]
-           
-            
-        ##scan_data[ind,1]+scan_data[ind,2]... need to sum all of these values
+    for i in range(num_x_coords):
+
+        for j in range(num_y_coords):
+
+            for k in range(num_pulses):
+                one_way_range=np.sqrt((x_vec[i]-platform_pos[k,0])**2 +
+                (y_vec[j]-platform_pos[k,1])**2 +
+                (z_offset-platform_pos[k,2])**2)
+
+                closest_idx=np.argmin(np.abs(one_way_range-range_bins))
+                complex_image[j,i] += pulses[k, closest_idx]
+
+    return complex_image
+
+yeet=backprojection(data['scan_data'], data['range_bins'], data['platform_pos'], (np.array(list(range(101)))-50) * 0.05 , (np.array(list(range(101)))-50) * 0.05)
+yeet = np.abs(yeet)
+plt.imshow(yeet)
+plt.show()
 
 
 
@@ -74,7 +91,7 @@ for each x in grid:
                 use pythagorean theorem to find distance from radar to the x, y point
                 get scan value, add it to sum
             set the value of x,y on the output to be equal to sum
-        output the entire matric of sums
+        output the entire matrix of sums
         
 In order to iterate over all of the x and y pairs in the system, use two nested for loops with a back projection call inside of the second
 
