@@ -39,7 +39,7 @@ def backprojection2d(data, start=-3, stop=3, resolution=0.05):
         distances = np.linalg.norm(points - pos, axis=2)
 ##        print(distances.shape)
         infer = np.reshape(distances, distances.size)
-        interp = np.interp(infer, range_bins[0], scan_data[scan_number]).reshape(xlen, ylen)
+        interp = np.interp(infer, range_bins, scan_data[scan_number]).reshape(xlen, ylen)
         return_data += np.flipud(interp)
         
 ##        pixel_x = -1
