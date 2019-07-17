@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 def backprojection3d(data, start=-3, stop=3, resolution=0.05):
     scan_data = data["scan_data"]
@@ -23,7 +24,7 @@ def backprojection2d(data, start=-3, stop=3, resolution=0.05):
     scan_data = data["scan_data"]
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"]
-    print(range_bins.shape, scan_data[0].shape)
+##    print(range_bins.shape, scan_data[0].shape)
     alen = int((stop - start) / resolution)
     xlen = alen
     ylen = alen
@@ -52,11 +53,17 @@ def backprojection2d(data, start=-3, stop=3, resolution=0.05):
 ##                return_data[pixel_x, pixel_y] += scan_data[scan_number][range_bin]
     return np.abs(return_data)
 
-with open('Mandrill_1way_data.pkl', 'rb') as f:
+parser = argparse.ArgumentParser(description="Run backprojection on SAR data.")
+parser.add_argument("--filename", "-f", type=str, required=True, help="SAR data filename")
+parser.add_argument("--start", type=float, default=-3, help="Start of the coordinate plane")
+parser.add_argument("--stop", type=float, default=3, help="End of the coordinate plane")
+parser.add_argument("--resolution", "--res", type=float, default=0.05, help="Resolution of the SAR image")
+args = parser.parse_args()
+
+with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 ##    print(data)
 
-bpdat = backprojection2d(data, -3, 3, 0.05)
-print(bpdat)
+bpdat = backprojection2d(data, args.start, args.stop, args.resolution)
 plt.imshow(bpdat)
 plt.show()
