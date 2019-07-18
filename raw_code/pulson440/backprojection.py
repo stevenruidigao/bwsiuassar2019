@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""A script to run backprojection."""
+
+__author__ = "Steven Gao"
+__version__ = "1.0"
+__maintainer__ = "Steven Gao"
+__email__ = "stevenruidigao@gmail.com"
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
