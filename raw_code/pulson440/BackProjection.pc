@@ -1,0 +1,11 @@
+back_projection():
+  For each x in the grid:
+    for each y in the grid:
+      sum = 0
+      for each scan:
+        use pythagorean theorum to find distance from radar to the x, y point
+        get scan value, add it to sum
+      set the value of (x, y) on the output to be equal to sum
+  output the entire matrix of sums
+  
+    
