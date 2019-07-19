@@ -23,20 +23,41 @@ def backprojection(data, start=-3, stop=3, resolution=0.05, twodimbins=False, mo
         raise RuntimeError("Invalid mode!")
 
 def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=False):
+    """Instance initialization.
+    
+    Args:
+        data (dict)
+            Data dictionary loaded from data file.
+            
+        start (int)
+            The x and y coordinates to start the image at.
+            
+        stop (int)
+            The x and y coordinates to stop the image at.
+            
+        resolution (float)
+            The number of pixels per square unit."
+
+        twodimbins (bool)
+            Whether or not to use weird two dimensional range bins.
+    """
+    # Load the data
     scan_data = data["scan_data"]
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"][0] if twodimbins else data["range_bins"]
+    # The number of pixels per dimension
     alen = int((stop - start) / resolution)
     xlen = alen
     ylen = alen
+    # Create the return data array with datatype complex128 
     return_data = np.zeros((xlen, ylen), dtype=np.complex128)
+    # Loop over each scan and add the appropriate intensities to each pixel through np.interp
     for scan_number in range(len(platform_pos)):
-        pos = platform_pos[scan_number]
-        meshgrid = np.asarray(np.meshgrid(np.linspace(start, stop, xlen), np.linspace(start, stop, ylen)))
+        pos = platform_pos[scan_number] # Take the position of the radar at the time of the current scan
+        meshgrid = np.asarray(np.meshgrid(np.linspace(start, stop, xlen), np.linspace(start, stop, ylen))) 
         points = np.concatenate((meshgrid, np.zeros((1, xlen, ylen)))).transpose(1, 2, 0)
         distances = np.linalg.norm(points - pos, axis=2)
-        infer = np.reshape(distances, distances.size)
-        interp = np.interp(infer, range_bins, scan_data[scan_number]).reshape(xlen, ylen)
+        interp = np.interp(distances, range_bins, scan_data[scan_number]).reshape(xlen, ylen)
         return_data += np.flipud(interp)
     return np.abs(return_data)
 
