@@ -23,7 +23,7 @@ def backprojection(data, start=-3, stop=3, resolution=0.05, twodimbins=False, mo
         raise RuntimeError("Invalid mode!")
 
 def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=False):
-    """Instance initialization.
+    """Runs backprjection on SAR data
     
     Args:
         data (dict)
@@ -43,6 +43,7 @@ def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     """
     # Load the data
     scan_data = data["scan_data"]
+    print(scan_data.shape)
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"][0] if twodimbins else data["range_bins"]
     # The number of pixels per dimension
@@ -54,12 +55,12 @@ def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     # Loop over each scan and add the appropriate intensities to each pixel through np.interp
     for scan_number in range(len(platform_pos)):
         pos = platform_pos[scan_number] # Take the position of the radar at the time of the current scan
-        meshgrid = np.asarray(np.meshgrid(np.linspace(start, stop, xlen), np.linspace(start, stop, ylen))) 
-        points = np.concatenate((meshgrid, np.zeros((1, xlen, ylen)))).transpose(1, 2, 0)
-        distances = np.linalg.norm(points - pos, axis=2)
-        interp = np.interp(distances, range_bins, scan_data[scan_number]).reshape(xlen, ylen)
-        return_data += np.flipud(interp)
-    return np.abs(return_data)
+        meshgrid = np.asarray(np.meshgrid(np.linspace(start, stop, xlen), np.linspace(start, stop, ylen))) # Create a 2D grid
+        points = np.concatenate((meshgrid, np.zeros((1, xlen, ylen)))).transpose(1, 2, 0) # Add a Z-dimesion and fill it with zeros
+        distances = np.linalg.norm(points - pos, axis=2) # Take the distance of each coordinate from the radar
+        interp = np.interp(distances, range_bins, scan_data[scan_number]).reshape(xlen, ylen) # Interpolate on those distances using range_bin data and scan_data
+        return_data += np.flipud(interp) # Flip the returned intensities and add the intensities to the return_data array
+    return np.abs(return_data) # Return the data
 
 def backprojection3dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=False):
     scan_data = data["scan_data"]
@@ -120,6 +121,7 @@ with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 
 print(args)
+print(data)
 
 bpdat = backprojection(data, args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
 plt.imshow(bpdat)
