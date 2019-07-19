@@ -1,1 +1,57 @@
+import pickle
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+with open('Mandrill_1way_data.pkl', 'rb') as f:
+    data=pickle.load(f)
+import time
+start=time.time()
+def backprojection(pulses, range_bins, platform_pos, x_vec, y_vec, z_offset=0):
+    num_pulses=pulses.shape[0]
+    num_x_coords=len(x_vec)
+    num_y_coords=len(y_vec)
+    complex_image=np.zeros((num_y_coords, num_x_coords), dtype=np.complex)
+"""
+    x_list= np.linspace(-3,3,120)
+    y_list= np.linspace(-3,3,120)
+    pix_coords_grid= np.meshgrid(x_list, y_list, indexing='ij')
+    pix_coords_grid= np.asarray(pix_coords_grid)
+    z_values=np.zeros((120, 120))
+    temp_split=np.dsplit(pix_coords_grid,2)
+    pix_coords_3d=np.stack((pix_coords_grid[0], pix_coords_grid[1], z_values))
+"""
+###this is making a 3D coordinate grid that is 120 by 120 at z level 0
+
+    for i in range(num_x_coords):
+
+        for j in range(num_y_coords):
+
+            for k in range(num_pulses):
+
+                #x_pulse= [platform_pos[k,0]]*120
+                #y_pulse= [platform_pos[k,1]]*120
+                #z_pulses= np.zeros((120, 120))
+
+        
+##beginning to subtract the two arrays    distance_grid=np.subract(pix_coords_grid)
+            
+
+###
+                one_way_range=np.sqrt((x_vec[i]-platform_pos[k,0])**2 +
+                (y_vec[j]-platform_pos[k,1])**2 +
+                (z_offset-platform_pos[k,2])**2)
+
+                closest_idx=np.argmin(np.abs(one_way_range-range_bins))
+                complex_image[-j,i] += pulses[k, closest_idx]
+
+    return complex_image
+
+yeet=backprojection(data['scan_data'], data['range_bins'], data['platform_pos'], (np.array(list(range(101)))-50) * 0.05 , (np.array(list(range(101)))-50) * 0.05)
+
+yeet = np.abs(yeet)
+end=time.time()
+print(end-start)
+plt.imshow(yeet)
+plt.show()
+
 
