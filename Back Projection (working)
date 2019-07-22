@@ -1,57 +1,113 @@
+#imports Ramu's file
 import pickle
+
+#imports a number of needed libs
 import numpy as np
+import time
 import math
 import matplotlib.pyplot as plt
+
+#open's Ramu's file
 with open('Mandrill_1way_data.pkl', 'rb') as f:
     data=pickle.load(f)
-import time
-start=time.time()
-def backprojection(pulses, range_bins, platform_pos, x_vec, y_vec, z_offset=0):
+    
+#starts time (REAL TIME) to track how long program runs; used to determine best possible efficiency of program for vectorization
+start = time.time()
+
+#defines back_projection function, takes in given number of arguments
+def back_projection(pulses, range_bins, platform_pos, x_vec, y_vec, z_offset=0):
     num_pulses=pulses.shape[0]
     num_x_coords=len(x_vec)
     num_y_coords=len(y_vec)
     complex_image=np.zeros((num_y_coords, num_x_coords), dtype=np.complex)
-"""
+
     x_list= np.linspace(-3,3,120)
     y_list= np.linspace(-3,3,120)
     pix_coords_grid= np.meshgrid(x_list, y_list, indexing='ij')
     pix_coords_grid= np.asarray(pix_coords_grid)
     z_values=np.zeros((120, 120))
-    temp_split=np.dsplit(pix_coords_grid,2)
     pix_coords_3d=np.stack((pix_coords_grid[0], pix_coords_grid[1], z_values))
-"""
-###this is making a 3D coordinate grid that is 120 by 120 at z level 0
-
+    
+#FIRST TIME = AROUND 35 SECONDS WITHOUT VECTORIZATION
+    
+#makes a 3D coordinate grid that is 120 by 120 at z level 0
+    
+    #iterates over every coordinate
     for i in range(num_x_coords):
-
+        
         for j in range(num_y_coords):
 
             for k in range(num_pulses):
 
-                #x_pulse= [platform_pos[k,0]]*120
-                #y_pulse= [platform_pos[k,1]]*120
-                #z_pulses= np.zeros((120, 120))
-
-        
-##beginning to subtract the two arrays    distance_grid=np.subract(pix_coords_grid)
+                x_pulse= [platform_pos[k,0]]*120
+                y_pulse= [platform_pos[k,1]]*120
+                z_pulse= np.zeros((120, 120))
+                
+                ''' work in progress code for vectorization
+                
+                x_vec_array = np.zeros(num_x_coords)
+                y_vec_array = np.zeros(num_y_coords)
+                z_offset_array = np.zeros(z_offset)
+                
+                #subtracts the two arrays    
+                x_vec_array = np.append(x_vec_array, x_vec[i])
+                y_vec_array = np.append(y_vec_array, y_vec[j])
+                z_offset_array = np.append(z_offset_array, z_offset)
+                
+                np.square(x_vec_array)
+                np.square(y_vec_array)
+                np.square(z_offset_array)
+                
+                sum1 = np.add(x_vec_array, y_vec_array)
+                sum2 = np.add(sum1, z_offset_array)
+                
+                one_way_range = np.sqrt(sum2)
+                
             
-
-###
+                vector_array = np.stack((x_vec_array, y_vec_array, z_offset_array))
+                platform_pos_array = np.stack((platform_pos[k,0], platform_pos[k,1], platform_pos[k,2]))
+                
+                distance_grid=np.subtract(vector_array, platform_pos_array)
+                    
+                np.square(distance_grid)
+                
+                sum_array = np.zeros((distance_grid.shape))
+                
+                distance_grid = np.asarray(distance_grid, dtype = float)
+                
+                for i in range(len(distance_grid[2])):
+                    for j in range(len(distance_grid[1])):
+                        for k in range(len(distance_grid[0])):
+                            sum = i + j + k
+                            one_way_range= np.append(sum_array, sum)
+                
+                one_way_range = np.sqrt(one_way_range)
+                            
+            
+            '''
+            
                 one_way_range=np.sqrt((x_vec[i]-platform_pos[k,0])**2 +
                 (y_vec[j]-platform_pos[k,1])**2 +
                 (z_offset-platform_pos[k,2])**2)
-
+            
                 closest_idx=np.argmin(np.abs(one_way_range-range_bins))
                 complex_image[-j,i] += pulses[k, closest_idx]
 
     return complex_image
+    
 
-yeet=backprojection(data['scan_data'], data['range_bins'], data['platform_pos'], (np.array(list(range(101)))-50) * 0.05 , (np.array(list(range(101)))-50) * 0.05)
+final = back_projection(data['scan_data'], data['range_bins'], data['platform_pos'], (np.array(list(range(101)))-50) * 0.05 , (np.array(list(range(101)))-50) * 0.05)
 
-yeet = np.abs(yeet)
-end=time.time()
-print(end-start)
-plt.imshow(yeet)
+
+final = np.abs(final)
+
+#ends REAL TIME; the current time after the program has run
+end = time.time()
+
+#subtracts final time from start time to determine amount of time elapsed
+print("Time taken for vectorized code: ", end-start, " seconds")
+
+#shows mathplotlib image
+plt.imshow(final)
 plt.show()
-
 
