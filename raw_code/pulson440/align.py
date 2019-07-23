@@ -21,14 +21,16 @@ def data_align(scan_data, platform_pos, range_bins, scan_timestamps, motion_time
     tkf_scan_num = newnew[0][0]
     tkf_motion_timestamp = data['motion_timestamps'][tkf_scan_num]
     #print(tkf_motion_timestamp)
+    
     cr_first_rbin = np.argmin(np.abs(first_value-range_bins))
     num_scans = len(scan_data)
     for k in range(1, num_scans):
         yeet = scan_data[k, cr_first_rbin]
-        yeet_two = scan_data[k-1, cr_first_rbin]
+        yeet_two = scan_data[k - 1, cr_first_rbin]
         if np.abs(yeet - yeet_two) > 4.5:
             return k
     return yeet
+    tkf_scan_timestamp = data['scan_timestamps'][k]
 
 
 data_align(data['scan_data'], data['platform_pos'], data['range_bins'], data['scan_timestamps'], data['motion_timestamps'], data['corner_reflector_pos'])
