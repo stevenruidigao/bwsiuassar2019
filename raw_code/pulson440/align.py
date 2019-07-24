@@ -32,29 +32,24 @@ def MC_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos):
     new = np.where(one_way_range==first_value, 0, one_way_range)
     newnew = np.nonzero(new)
     tkf_scan_num = newnew[0][0]
-    tkf_motion_timestamp = data['motion_timestamps'][tkf_scan_num]
-    print("Time of takeoff after the motion capture device was turned on (seconds): ", tkf_motion_timestamp)
+    return data['motion_timestamps'][tkf_scan_num]
+##    print("Time of takeoff after the motion capture device was turned on (seconds): ", tkf_motion_timestamp)
 
 #function within a function; finds the time stamp at which the drone takes off relative to the radar's timer
 def RD_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos):
-    one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
-    first_value = one_way_range[0]
-    cr_first_rbin = np.argmin(np.abs(first_value-range_bins))
-    num_scans = len(scan_data)
-    for k in range(1, num_scans):
-        yeet = scan_data[k, cr_first_rbin]
-        yeet_two = scan_data[k-1, cr_first_rbin]
-        if np.abs(yeet - yeet_two) > 4.5:
-            tkf_scan_timestamp = data['scan_timestamps'][k]
-            print("Time of takeoff after the radar was turned on (seconds): ", tkf_scan_timestamp)
-            return k
+    print(np.linalg.norm(scan_data - scan_data[0], axis=1))
+    print(np.where(np.linalg.norm(scan_data - scan_data[0], axis=1) > 4.5, 0, 1))
+    return data['scan_timestamps'][np.where(np.linalg.norm(scan_data - scan_data[0], axis=1) > 4.5, 1, 0).nonzero()[0][0]] - data['scan_timestamps'][0]
 
 
 #data align function (incomplete, nothing is there we just called our functions here so the data align function doesnt throw an error)
 def data_align(scan_data, platform_pos, range_bins, scan_timestamps, motion_timestamps, corner_reflector_pos):
-    MC_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos)
-    RD_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos)
-
+    a = MC_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    b = RD_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos)
+##    print(scan_timestamps, motion_timestamps)
+    print(a, b)
+    aligned_mocap_times = motion_timestamps + b - a
+    print(aligned_mocap_times)
 data_align(data['scan_data'], data['platform_pos'], data['range_bins'], data['scan_timestamps'], data['motion_timestamps'], data['corner_reflector_pos'])
 
 
