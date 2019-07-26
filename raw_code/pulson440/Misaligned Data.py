@@ -16,7 +16,7 @@ motion_data = pd.read_csv(motion_data_path, header=2)
 with open(filepath, 'rb') as f:
     data = pickle.load(f)
 
-print(data)
+# print(data)
 
 
 def get_pos(motion, name):
@@ -59,7 +59,7 @@ def RD_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos, 
     for k in range(1, num_scans):
         current = scan_data[k, cr_first_rbin]
         previous = scan_data[k-1, cr_first_rbin]
-        if np.abs(current - previous) > 4.5:
+        if np.abs(current - previous) > 0.5:
             return k
 
 
@@ -77,6 +77,10 @@ def data_align(scan_data, platform_pos, range_bins, scan_timestamps, motion_time
     # print(tkf_scan_timestamp, tkf_motion_timestamp)
     # print(aligned_motion_times)
     return aligned_motion_times
+
+
+def motion_change(scan_data, platform_pos, range_bins, scan_timestamps, motion_timestamps, corner_reflector_pos):
+    return MC_tkf_timestamp(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
 
 def better_back_projection(data, resolution, xstart, xstop, ystart, ystop):
@@ -130,11 +134,35 @@ def better_back_projection(data, resolution, xstart, xstop, ystart, ystop):
     return np.abs(ret)
 
 
-# diction = get_pos(data, "LB_Marker")
-data['motion_timestamps'] = data_align(data['scan_data'], data['platform_pos'], data['range_bins'], data['scan_timestamps'],
-             data['motion_timestamps'], data['corner_reflector_pos'])
+def realign_position(data):
+    pos_x = data['platform_pos'][:, 0]
+    pos_y = data['platform_pos'][:, 1]
+    pos_z = data['platform_pos'][:, 2]
 
-better_back_projection(data, 0.01, -3, 3, -3, 3)
+    realigned_pos_x = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_x)
+    realigned_pos_y = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_y)
+    realigned_pos_z = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_z)
+
+    data['platform_pos'] = np.column_stack((realigned_pos_x, realigned_pos_y, realigned_pos_z))
+    return data
+
+
+def get_ranges(data):
+
+
+
+# diction = get_pos(data, "LB_Marker")
+
+data['motion_timestamps'] = data_align(data['scan_data'], data['platform_pos'], data['range_bins'],
+                                       data['scan_timestamps'], data['motion_timestamps'], data['corner_reflector_pos'])
+
+data = realign_position(data)
+
+# data['motion_timestamps'] = np.linspace(data['motion_timestamps'][0], data['motion_timestamps'][-1],
+#                                         len(data['range_bins'][0]))
+
+# data['motion_timestamps'] = np.interp(data['motion_timestamps'], data['range_bins'][0], data['motion_timestamps'])
+# better_back_projection(data, 0.01, -3, 3, -3, 3)
 
 
 # print(diction['Time (Seconds)'])
@@ -156,7 +184,12 @@ plt.imshow(np.abs(data['scan_data']),
                    
 plt.xlabel('Range (m)')
 plt.ylabel('Elapsed Time (s)')
+plt.pause(5)
 
-plt.plot(data['range_bins'][0], data['motion_timestamps'], 'r--')
+print(len(data['scan_data']) == len(data['platform_pos']))
+
+ranges = get_ranges(data)
+plt.plot(data['platform_pos'], np.abs(data['scan_data']), 'r--')
+plt.pause(5)
 
 
