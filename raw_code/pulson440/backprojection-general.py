@@ -47,7 +47,7 @@ def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"][0] if twodimbins else data["range_bins"]
     # The number of pixels per dimension
-    alen = int((stop - start) / resolution)
+    alen = int((stop - start) / resolution) + 1
     xlen = alen
     ylen = alen
     # Create the return data array with datatype complex128 
@@ -66,7 +66,7 @@ def backprojection3dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     scan_data = data["scan_data"]
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"][0] if twodimbins else data["range_bins"]
-    alen = int((stop - start) / resolution)
+    alen = int((stop - start) / resolution) + 1
     xlen = alen
     ylen = alen
     zlen = alen
@@ -90,7 +90,7 @@ def backprojection2dslow(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     platform_pos = data["platform_pos"]
     range_bins = data["range_bins"][0] if twodimbins else data["range_bins"]
     print(range_bins)
-    alen = int((stop - start) / resolution)
+    alen = int((stop - start) / resolution) + 1
     xlen = alen
     ylen = alen
     return_data = np.zeros((xlen, ylen))
