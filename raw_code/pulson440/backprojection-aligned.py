@@ -190,23 +190,30 @@ if args.realign:
     bpdat = backprojection(motion_align(data), args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
 else:
     bpdat = backprojection(data, args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
-plt.imshow(bpdat)
+
+plt.xlabel('X (m)')
+plt.ylabel('Z (m)')
+plt.imshow(bpdat,
+    extent=(
+        args.start,
+        args.stop,
+        args.stop,
+        args.start))
+plt.clim(100, 150000)
+plt.colorbar()
 plt.show()
 
 data = motion_align(data)
 
 plt.imshow(np.abs(data['scan_data']),
-           extent=(
-                   data['range_bins'][0, 0],
-                   data['range_bins'][0, -1],
-                   data['scan_timestamps'][-1] - data['scan_timestamps'][0],
-                   0))
+    extent=(
+        data['range_bins'][0, 0],
+        data['range_bins'][0, -1],
+        data['scan_timestamps'][-1] - data['scan_timestamps'][0],
+        0))
 
 plt.xlabel('Range (m)')
 plt.ylabel('Elapsed Time (s)')
-
-print(len(data['motion_timestamps']) == len(data['platform_pos']))
-
 r1 = np.sqrt(np.sum(
         (data['platform_pos'] - data['corner_reflector_pos'][0, :])**2, 1))
 r2 = np.sqrt(np.sum(
