@@ -24,17 +24,17 @@ def backprojection(data, start=-3, stop=3, resolution=0.05, twodimbins=False, mo
 
 def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=False):
     """Runs backprjection on SAR data
-    
+
     Args:
         data (dict)
             Data dictionary loaded from data file.
-            
+
         start (int)
             The x and y coordinates to start the image at.
-            
+
         stop (int)
             The x and y coordinates to stop the image at.
-            
+
         resolution (float)
             The number of pixels per square unit."
 
@@ -49,7 +49,7 @@ def backprojection2dfast(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     alen = int((stop - start) / resolution) + 1
     xlen = alen
     ylen = alen
-    # Create the return data array with datatype complex128 
+    # Create the return data array with datatype complex128
     return_data = np.zeros((xlen, ylen), dtype=np.complex128)
     # Loop over each scan and add the appropriate intensities to each pixel through np.interp
     for scan_number in range(len(platform_pos)):
@@ -96,7 +96,7 @@ def backprojection2dslow(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
     pixel_x = -1
     for x in np.linspace(start, stop, xlen):
         pixel_x += 1
-        pixel_y = -1 
+        pixel_y = -1
         for y in np.linspace(start, stop, ylen):
             pixel_y += 1
             for scan_number in range(len(platform_pos)):
@@ -151,15 +151,14 @@ def motion_align(data):
     MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
 
     print(RD_change_time, MC_change_time)
-    
-    newdata = data.copy()
-    
-    newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
-##    newdata['motion_timestamps'] += RD_change_time - MC_change_time
 
-    
+    newdata = data.copy()
+
+    newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
+    newdata['motion_timestamps'] += RD_change_time - MC_change_time
+
 ##    print(newdata)
-    
+
     pos_x = newdata['platform_pos'][:, 0]
     pos_y = newdata['platform_pos'][:, 1]
     pos_z = newdata['platform_pos'][:, 2]
@@ -167,11 +166,16 @@ def motion_align(data):
     realigned_pos_x = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_x)
     realigned_pos_y = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_y)
     realigned_pos_z = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_z)
-    
+
     newdata['platform_pos'] = np.column_stack((realigned_pos_x, realigned_pos_y, realigned_pos_z))
-    newdata['motion_timestamps'] = newdata['scan_timestamps'] + RD_change_time - MC_change_time
+    newdata['motion_timestamps'] = newdata['scan_timestamps']
     print(newdata['scan_timestamps'])
     return newdata
+
+def range_norm(scan_data, range_bins):
+    norm_scan_data = np.copy(scan_data)
+    norm_scan_data *= ((range_bins / range_bins[0]) ** 4)
+    return norm_scan_data
 
 parser = argparse.ArgumentParser(description=" - Runs backprojection on SAR data.")
 parser.add_argument("--filename", "-f", type=str, required=True, help=" - The SAR data filename")
@@ -186,6 +190,11 @@ args = parser.parse_args()
 with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 
+
+data = motion_align(data)
+
+range_norm(data['scan_data'], data['range_bins'])
+
 print(args)
 ##print(data)
 if args.realign:
@@ -195,7 +204,6 @@ else:
 plt.imshow(bpdat)
 plt.show()
 
-data = motion_align(data)
 
 plt.imshow(np.abs(data['scan_data']),
            extent=(
