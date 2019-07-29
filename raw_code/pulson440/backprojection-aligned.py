@@ -110,7 +110,7 @@ def backprojection2dslow(data, start=-3, stop=3, resolution=0.05, twodimbins=Fal
 def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
     first_value = one_way_range[0]
-    print(one_way_range == first_value)
+##    print(one_way_range == first_value)
     indices = (one_way_range != first_value).nonzero()
     # print(indices)
     tkf_scan_num = indices[0][0]
@@ -145,14 +145,20 @@ def motion_align(data):
     range_bins = data['range_bins']
     corner_reflector_pos = data['corner_reflector_pos']
     motion_timestamps = data['motion_timestamps']
-    scan_timestamps = data['scan_timestamps']
-    print(MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos), RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos), RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos))
+    scan_timestamps = data['scan_timestamps'] - data['scan_timestamps'][0]##    print(MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos), RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos), RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos))
 
-    RD_change_time = scan_timestamps[RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
+    RD_change_time = scan_timestamps[RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)]
     MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
+
+    print(RD_change_time, MC_change_time)
     
     newdata = data.copy()
-    newdata['motion_timestamps'] += RD_change_time - MC_change_time
+    
+    newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
+##    newdata['motion_timestamps'] += RD_change_time - MC_change_time
+
+    
+##    print(newdata)
     
     pos_x = newdata['platform_pos'][:, 0]
     pos_y = newdata['platform_pos'][:, 1]
@@ -163,6 +169,8 @@ def motion_align(data):
     realigned_pos_z = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_z)
     
     newdata['platform_pos'] = np.column_stack((realigned_pos_x, realigned_pos_y, realigned_pos_z))
+    newdata['motion_timestamps'] = newdata['scan_timestamps'] + RD_change_time - MC_change_time
+    print(newdata['scan_timestamps'])
     return newdata
 
 parser = argparse.ArgumentParser(description=" - Runs backprojection on SAR data.")
@@ -185,4 +193,24 @@ if args.realign:
 else:
     bpdat = backprojection(data, args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
 plt.imshow(bpdat)
+plt.show()
+
+data = motion_align(data)
+
+plt.imshow(np.abs(data['scan_data']),
+           extent=(
+                   data['range_bins'][0, 0],
+                   data['range_bins'][0, -1],
+                   data['scan_timestamps'][-1] - data['scan_timestamps'][0],
+                   0))
+
+plt.xlabel('Range (m)')
+plt.ylabel('Elapsed Time (s)')
+
+print(len(data['motion_timestamps']) == len(data['platform_pos']))
+
+##ranges = get_ranges(data)
+r1 = np.sqrt(np.sum(
+        (data['platform_pos'] - data['corner_reflector_pos'][0, :])**2, 1))
+plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector 1')
 plt.show()
