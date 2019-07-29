@@ -391,6 +391,11 @@ def motion_align(data):
     newdata['motion_timestamps'] = newdata['scan_timestamps']
     return newdata
 
+def range_norm(scan_data, range_bins):
+    norm_scan_data = np.copy(scan_data)
+    norm_scan_data *= ((range_bins / range_bins[0]) ** 4)
+    return norm_scan_data
+
 parser = argparse.ArgumentParser(description=" - Runs backprojection on SAR data.")
 parser.add_argument("--filename", "-f", type=str, required=True, help=" - The SAR data filename")
 parser.add_argument("--start", type=float, default=-3, help=" - The start of the coordinate plane")
