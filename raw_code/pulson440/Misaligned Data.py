@@ -139,10 +139,17 @@ def realign_position(data):
     pos_y = data['platform_pos'][:, 1]
     pos_z = data['platform_pos'][:, 2]
 
+<<<<<<< HEAD
     realigned_pos_x = np.interp(data['scan_timestamps'], data['motion_timestamps'], pos_x)
     realigned_pos_y = np.interp(data['scan_timestamps'], data['motion_timestamps'], pos_y)
     realigned_pos_z = np.interp(data['scan_timestamps'], data['motion_timestamps'], pos_z)
     
+=======
+    realigned_pos_x = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_x)
+    realigned_pos_y = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_y)
+    realigned_pos_z = np.interp(range(len(data['scan_data'])), range(len(data['platform_pos'])), pos_z)
+
+>>>>>>> 8d3dbe237befdc43e62fb450062e3a35f5ed290b
     data['platform_pos'] = np.column_stack((realigned_pos_x, realigned_pos_y, realigned_pos_z))
     return data
 
