@@ -57,14 +57,19 @@ def backprojection2dfast(data, start=-3, stop=3, resolution=0.05):
     ylen = alen
     # Create the return data array with datatype complex128 
     return_data = np.zeros((xlen, ylen), dtype=np.complex128)
+##    print(return_data)
     # Loop over each scan and add the appropriate intensities to each pixel through np.interp
     for scan_number in range(len(platform_pos)):
         pos = platform_pos[scan_number] # Take the position of the radar at the time of the current scan
         meshgrid = np.asarray(np.meshgrid(np.linspace(start, stop, xlen), np.linspace(start, stop, ylen))) # Create a 2D grid
+##        print(meshgrid)
         points = np.concatenate((meshgrid, np.zeros((1, xlen, ylen)))).transpose(1, 2, 0) # Add a Z-dimesion and fill it with zeros
         distances = np.linalg.norm(points - pos, axis=2) # Take the distance of each coordinate from the radar
+##        print(distances)
         interp = np.interp(distances, range_bins, scan_data[scan_number]).reshape(xlen, ylen) # Interpolate on those distances using range_bin data and scan_data
         return_data += np.flipud(interp) # Flip the returned intensities and add the intensities to the return_data array
+##        print(npinterp)
+##    print(return_data)
     return np.abs(return_data)
 
 def backprojection3dfast(data, start=-3, stop=3, resolution=0.05):
@@ -113,7 +118,7 @@ def backprojection2dslow(data, start=-3, stop=3, resolution=0.05):
             return_data[pixel_x, pixel_y] = abs(return_data[pixel_x, pixel_y])
     return return_data
 
-def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
+def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold=0.5):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
     first_value = one_way_range[0]
 ##    print(one_way_range == first_value)
@@ -124,7 +129,7 @@ def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
 
 
 # function within a function; finds the time stamp at which the drone takes off relative to the radar's timer
-def RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
+def RD_tkf_index_old(scan_data, platform_pos, range_bins, corner_reflector_pos):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
     first_value = one_way_range[0]
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
@@ -135,14 +140,14 @@ def RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
         if np.abs(current - previous) > 0.5:
             return k
 
-def RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos):
+def RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold=0.5):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
     first_value = one_way_range[0]
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
     num_scans = len(scan_data)
-    return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > 0.5).nonzero()[0][0] # 11.208849086510625 
+    return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > threshold).nonzero()[0][0] # 11.208849086510625 
 
-def motion_align(data):
+def motion_align(data, threshold):
     scan_data = data['scan_data']
     platform_pos = data['platform_pos']
     range_bins = data['range_bins']
@@ -150,8 +155,8 @@ def motion_align(data):
     motion_timestamps = data['motion_timestamps']
     scan_timestamps = data['scan_timestamps'] - data['scan_timestamps'][0]
     
-    RD_change_time = scan_timestamps[RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)]
-    MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
+    RD_change_time = scan_timestamps[RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
+    MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
     
     print(RD_change_time, MC_change_time)
     
@@ -181,9 +186,9 @@ def range_norm(data):
 
 def replace_nans(data):
     newdata = data.copy()
-    replacement_data = replace_nan(newdata['range_bins'], newdata['scan_data'])
-    newdata['range_bins'] = replacement_data[0]
-    newdata['scan_data'] = replacement_data[1]
+    replacement_data = replace_nan(newdata['motion_timestamps'], newdata['platform_pos'])
+    newdata['motion_timestamps'] = replacement_data[0]
+    newdata['platform_pos'] = replacement_data[1]
     return newdata
 
 def crop(data, start_range, end_range):
@@ -203,8 +208,8 @@ def crop(data, start_range, end_range):
     rd_landing = mid + 30
         # RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
-    print(type(start_range))
-    print(type(range_bins))
+##    print(type(start_range))
+##    print(type(range_bins))
 ##    print(range_bins - start_range)
 ##    print(range_bins)
     
@@ -236,7 +241,7 @@ parser.add_argument("--stop", type=float, default=3, help=" - The end of the coo
 parser.add_argument("--resolution", "--res", type=float, default=0.05, help=" - The resolution of the SAR image.")
 parser.add_argument("--two_dimensional_range_bins", "--2D-range-bins",  "--2D_bins", action="store_true", help=" - Enables use of weird 2D range_bins.")
 parser.add_argument("--mode", "-m", type=str, default="2dfast", help=" - The mode to run back projection in.")
-parser.add_argument("--realign", "--align", action="store_true", help=" - Realigns the motion capture data and the radar data.")
+parser.add_argument("--realign", "--align", type=float, required=False, help=" - Realigns the motion capture data and the radar data.")
 parser.add_argument("--crop", "-c", nargs=2, metavar=("start", "stop"), help=" - Crops the corner reflectors out using start and stop positions.")
 parser.add_argument("--normalize", "--norm", action="store_true", help=" - Uses the range_norm function to account for different ranges in the list of intesities")
 parser.add_argument("--clim", nargs=2, help=" - Color map stuff")
@@ -253,8 +258,8 @@ data = replace_nans(data)
 if args.two_dimensional_range_bins:
     data['range_bins'] = data['range_bins'][0]
     
-if args.realign:
-    data = motion_align(data)
+if args.realign is not None:
+    data = motion_align(data, args.realign)
 
 if args.normalize:
     data = range_norm(data)
@@ -278,8 +283,9 @@ plt.show()
 if args.crop is not None:
     data = crop(data, float(args.crop[0]), float(args.crop[1]))
 
-print(data)
+##print(data)
 bpdat = backprojection(data, args.start, args.stop, args.resolution, args.mode)
+##print(bpdat)
 
 plt.xlabel('X (m)')
 plt.ylabel('Z (m)')
