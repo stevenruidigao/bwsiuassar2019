@@ -11,6 +11,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import argparse
+##import common.helper_functions as helper
+from pathlib import Path
+import sys
+if Path("..//").resolve().as_posix() not in sys.path:
+    sys.path.insert(0, Path("..//").resolve().as_posix())
+from common.helper_functions import replace_nan
 
 def backprojection(data, start=-3, stop=3, resolution=0.05, twodimbins=False, mode="2dfast"):
     if mode == "2dfast":
@@ -171,6 +177,14 @@ def range_norm(scan_data, range_bins):
     norm_scan_data *= ((range_bins / range_bins[0]) ** 4)
     return norm_scan_data
 
+def replace_nans(data):
+    newdata = data.copy()
+    replacement_data = replace_nan(newdata['range_bins'], newdata['scan_data'])
+    newdata['range_bins'] = replacement_data[0]
+    newdata['scan_data'] = replacement_data[1]
+    return newdata
+    
+
 parser = argparse.ArgumentParser(description=" - Runs backprojection on SAR data.")
 parser.add_argument("--filename", "-f", type=str, required=True, help=" - The SAR data filename")
 parser.add_argument("--start", type=float, default=-3, help=" - The start of the coordinate plane")
@@ -185,11 +199,12 @@ with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 
 print(args)
-##print(data)
+print(data)
+
 if args.realign:
-    bpdat = backprojection(motion_align(data), args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
+    bpdat = backprojection(motion_align(replace_nans(data)), args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
 else:
-    bpdat = backprojection(data, args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
+    bpdat = backprojection(replace_nans(data), args.start,args.stop, args.resolution, args.two_dimensional_range_bins, args.mode)
 
 plt.xlabel('X (m)')
 plt.ylabel('Z (m)')
