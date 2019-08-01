@@ -56,7 +56,7 @@ def backprojection2dfast(data, xstart=-3, xstop=3, ystart=-3, ystop=3, xresoluti
     return_data = np.zeros((xlen, ylen), dtype=np.complex128)
 ##    print(return_data)
     # Loop over each scan and add the appropriate intensities to each pixel through np.interp
-    for scan_number in range(1):
+    for scan_number in range(len(platform_pos)):
         pos = platform_pos[scan_number] # Take the position of the radar at the time of the current scan
         meshgrid = np.asarray(np.meshgrid(np.linspace(xstart, xstop, xlen), np.linspace(ystart, ystop, ylen))) # Create a 2D grid
 ##        print(meshgrid[0].shape, meshgrid[1].shape, np.zeros((1, ylen, xlen)).shape)
@@ -226,8 +226,10 @@ def crop(data, start_range, end_range, threshold=0.5):
 
     mid = int(len(scan_timestamps) / 2)
 
+##    rd_takeoff = mid - 30 #
     rd_takeoff = RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
 
+##    rd_landing = mid + 30 #
     rd_landing = RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
 
 ##    print(type(start_range))
@@ -307,7 +309,7 @@ parser.add_argument("--crop", "-c", nargs=2, metavar=("start", "stop"), help=" -
 parser.add_argument("--normalize", "--norm", action="store_true", help=" - Uses the range_norm function to account for different ranges in the list of intesities")
 parser.add_argument("--clim", nargs=2, help=" - Color map stuff")
 parser.add_argument("--reflectors", type=int, default=1, help=" - Number of corner reflectors")
-parser.add_argument("--replace-nans", "--nans", action="store_true", help = "Whether or not to replace NaNs in motion capture data.")
+parser.add_argument("--replace_nans", "--nans", action="store_true", help = "Whether or not to replace NaNs in motion capture data.")
 args = parser.parse_args()
 
 print(args)
@@ -342,7 +344,7 @@ if args.realign:
         plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector' + str(refnum + 1))
     plt.show()
 
-print(data["platform_pos"], data["platform_pos"].shape)
+##print(data["platform_pos"], data["platform_pos"].shape)
 
 if args.crop is not None:
     data = crop(data, float(args.crop[0]), float(args.crop[1]), args.realign_thresh)
@@ -353,7 +355,7 @@ if args.normalize:
 ##print(data)
 
 bpdat = backprojection(data, args.xstart, args.xstop, args.ystart, args.ystop, args.zstart, args.zstop, args.xresolution, args.yresolution, args.zresolution, args.mode)
-##print(bpdat)
+print(bpdat)
 ##print(bpdat.shape)
 print(data["platform_pos"], data["platform_pos"].shape)
 
@@ -367,5 +369,5 @@ plt.imshow(bpdat,
         args.ystart))
 ##plt.clim(100)
 plt.colorbar()
-plt.plot(data['platform_pos'][:, 0], data['platform_pos'][:, 1], 'r-')
+##plt.plot(data['platform_pos'][:, 0], data['platform_pos'][:, 1], 'r-')
 plt.show()
