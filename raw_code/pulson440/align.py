@@ -5,13 +5,13 @@ COMMENT PROGRAM DESCRIPTION HERE
 #SOMEONE WRITE DOCUMENTATION FOR ARGUMENTS 
 
 
-# imports desired libs
+#imports desired libs
 import pandas as pd
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 
-# opens and loads pickle file
+#opens and loads pickle file
 with open('Mandrill_1way_Misaligned3_data.pkl', 'rb') as f:
     data = pickle.load(f)
 
@@ -26,7 +26,6 @@ plt.imshow(np.abs(data['scan_data']), extent=(data['range_bins'][0,0], data['ran
 plt.xlabel('Range (m)')
 plt.ylabel('Elapsed Time (s)')
 """
-
 
 #reads the CSV file
 def panda_stuff(path):
@@ -76,7 +75,7 @@ def RD_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos, s
     #first range value
     first_value = one_way_range[0]
 
-    #COMMENT HERE
+    #returns the index of each distance from first_value to a range, otherwise known as a range bin
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
 
     #takes the length of scan data to determine how many scans were done, assigned to num_scans
@@ -85,32 +84,32 @@ def RD_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos, s
     #print("THIS IS SCAN DATA: ", scan_data)
     #print("THIS IS MOTION CAPTURE DAYDU: ", platform_pos)
 
-    #COMMENT HERE
+    #for k in the number of scans performed, it will take the scan at hand and the scan done before and find the difference. 
+    #if the absolute value of that difference is greater than 2.5, it will return the scan number because 2.5 is the greatest variability
+    #the numbers can have. anything greater than that means the range has really changed. thus, it returns the scan number at which it does.
     for k in range(1, num_scans):
         current = scan_data[k, cr_first_rbin]
         previous = scan_data[k - 1, cr_first_rbin]
         if np.abs(current - previous) > 2.5:
             return k
 
-#COMMENTING OF FUNCTION UNFINISHED
-
-# data align function (incomplete, nothing is there we just called our
-# functions here so the data align function doesnt throw an error)
+#this function aligns the timestamps so we are able to accurately align the data
 def data_align(scan_data, platform_pos, range_bins, scan_timestamps, motion_timestamps, corner_reflector_pos):
 
-    motion_change_time = MC_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    motion_change_index = MC_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
-    radar_change_time = RD_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos, scan_timestamps)
+    radar_change_index = RD_change_index(scan_data, platform_pos, range_bins, corner_reflector_pos, scan_timestamps)
 
-    print("Radar change time here: ", radar_change_time)
+    print("Radar change index here: ", radar_change_index)
     # print(data['scan_timestamps'])
-
+    
+    #makes radar timestamps start at 0
     real_scan_times = scan_timestamps - scan_timestamps[0]
-    # print(real_scan_times)
+    
+    #
+    tkf_motion_timestamp = motion_timestamps[motion_change_index]
 
-    tkf_motion_timestamp = motion_timestamps[motion_change_time]
-
-    tkf_scan_timestamp = real_scan_times[radar_change_time]
+    tkf_scan_timestamp = real_scan_times[radar_change_index]
 
     aligned_motion_times = motion_timestamps + (tkf_scan_timestamp - tkf_motion_timestamp)
     # print(tkf_scan_timestamp, tkf_motion_timestamp)
