@@ -190,7 +190,7 @@ def time_align(data, threshold=0.5, shift=0):
     RD_change_time = scan_timestamps[RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
     MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
     
-##    print(RD_change_time, MC_change_time)
+    print(RD_change_time, MC_change_time)
     
     newdata = data.copy()
     
@@ -226,7 +226,7 @@ def replace_nans(data):
     replacement_data = replace_nan(newdata['motion_timestamps'], newdata['platform_pos'])
     newdata['motion_timestamps'] = replacement_data[0]
     newdata['platform_pos'] = replacement_data[1]
-##    print(newdata)
+    print(newdata)
     return newdata
 
 def crop(data, start_range, end_range, threshold=0.5):
@@ -241,9 +241,8 @@ def crop(data, start_range, end_range, threshold=0.5):
     mid = int(len(scan_timestamps) / 2)
 
 ##    rd_takeoff = mid - 30 #
-    print(RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
     rd_takeoff = RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
-    print(RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
+
 ##    rd_landing = mid + 30 #
     rd_landing = RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
 
@@ -335,7 +334,7 @@ with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 
 
-##print(data['platform_pos'])
+print(data['platform_pos'])
 
 if args.replace_nans:
     data = replace_nans(data)
@@ -347,21 +346,20 @@ if args.realign:
     data = range_align(data, args.range_shift)
     data = time_align(data, args.realign_thresh, args.realign_shift)
 ##    print(data['platform_pos'])
-    plt.imshow(np.abs(data['scan_data'])
-##        extent=(
-##            data['range_bins'][0],
-##            data['range_bins'][-1],
-##            data['scan_timestamps'][-1] - data['scan_timestamps'][0],
-##            0))
-               )
+    plt.imshow(np.abs(data['scan_data']),
+        extent=(
+            data['range_bins'][0],
+            data['range_bins'][-1],
+            data['scan_timestamps'][-1] - data['scan_timestamps'][0],
+            0))
 
     plt.xlabel('Range (m)')
     plt.ylabel('Elapsed Time (s)')
 
-##    for refnum in range(args.reflectors):
-##        r1 = np.sqrt(np.sum(
-##                (data['platform_pos'] - data['corner_reflector_pos'][refnum, :])**2, 1))
-##        plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector' + str(refnum + 1))
+    for refnum in range(args.reflectors):
+        r1 = np.sqrt(np.sum(
+                (data['platform_pos'] - data['corner_reflector_pos'][refnum, :])**2, 1))
+        plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector' + str(refnum + 1))
         
     if args.crop is not None:
         startx = np.zeros(int(data['scan_timestamps'][-1] - data['scan_timestamps'][0])) + float(args.crop[0])
@@ -384,7 +382,7 @@ if args.normalize:
 ##print(data)
 
 bpdat = backprojection(data, args.xstart, args.xstop, args.ystart, args.ystop, args.zstart, args.zstop, args.xresolution, args.yresolution, args.zresolution, args.mode)
-##print(bpdat)
+print(bpdat)
 ##print(bpdat.shape)
 ##print(data["platform_pos"], data["platform_pos"].shape, data['scan_timestamps'])
 
