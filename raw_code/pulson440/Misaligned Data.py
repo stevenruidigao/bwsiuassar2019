@@ -49,7 +49,9 @@ def get_cr_pos(corner, name):
             break
         curr += 1
     start_index += 4
-    ret = (corner.iloc[3, start_index], corner.iloc[3, start_index + 1], corner.iloc[3, start_index + 2])
+    ret = (float(corner.iloc[3, start_index]),
+           float(corner.iloc[3, start_index + 1]),
+           float(corner.iloc[3, start_index + 2]))
     return ret
 
 
@@ -95,7 +97,9 @@ def MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
 
 # function within a function; finds the time stamp at which the drone takes off relative to the radar's timer
 def RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos):
-    one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
+    # print(platform_pos.dtype)
+    # print(np.float64(corner_reflector_pos[0]).dtype)
+    one_way_range = np.sqrt(np.sum(np.square(platform_pos - (corner_reflector_pos[0])), axis=1))
     first_value = one_way_range[0]
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
     num_scans = len(scan_data)
@@ -322,6 +326,7 @@ def motion_align(data):
     newdata = data.copy()
 
     newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
+    # newdata['motion_timestamps'] -= newdata['motion_timestamps'][0]
     # newdata['motion_timestamps'] += 1.5 * (RD_change_time - MC_change_time)
 
     # print(newdata)
@@ -329,7 +334,7 @@ def motion_align(data):
     pos_x = newdata['platform_pos'][:, 0]
     pos_y = newdata['platform_pos'][:, 1]
     pos_z = newdata['platform_pos'][:, 2]
-    newdata['motion_timestamps'] += 0.3 * (RD_change_time - MC_change_time)
+    # newdata['motion_timestamps'] += 0.3 * (RD_change_time - MC_change_time)
 
     realigned_pos_x = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_x)
     realigned_pos_y = np.interp(newdata['scan_timestamps'], newdata['motion_timestamps'], pos_y)
@@ -362,28 +367,28 @@ def cropper(data, *ranges):
     # RD_change_time = scan_timestamps[RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)]
     # MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
 
-    # mc_takeoff = MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
-    # mc_landing = MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    mc_takeoff = MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    mc_landing = MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
-    rd_takeoff = 1000
-    # rd_takeoff = RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    # rd_takeoff = 1000
+    rd_takeoff = RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
-    rd_landing = 1200
-    # rd_landing = RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
+    # rd_landing = 1200
+    rd_landing = RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
 
     if len(ranges) > 1:
         start_index = (np.abs(range_bins - ranges[0])).argmin()
         end_index = (np.abs(range_bins - ranges[1])).argmin()
         scan_data = scan_data[rd_takeoff:rd_landing, start_index:end_index]
-        range_bins = range_bins[0][start_index:end_index]
+        range_bins = range_bins[start_index:end_index]
     else:
         scan_data = scan_data[rd_takeoff:rd_landing]
         range_bins = range_bins[0]
 
     scan_timestamps = scan_timestamps[rd_takeoff:rd_landing]
 
-    platform_pos = platform_pos[rd_takeoff:rd_landing]
-    motion_timestamps = motion_timestamps[rd_takeoff:rd_landing]
+    platform_pos = platform_pos[mc_takeoff:mc_landing]
+    motion_timestamps = motion_timestamps[mc_takeoff:mc_landing]
     # motion_timestamps -= motion_timestamps[0]
 
     data['scan_timestamps'] = scan_timestamps
@@ -404,7 +409,7 @@ data = combine_data(motion_data, radar_data, get_cr_pos(corner_data, 'Corner Ref
 data = replace_nans(data)
 data = motion_align(data)
 
-data = cropper(data, 14, 18)
+data = cropper(data, 1, 15)
 
 better_back_projection(data, 0.01, -1.5, 2.5, -2.5, 1.5)
 
@@ -413,7 +418,8 @@ plt.imshow(np.abs(data['scan_data']),
                    data['range_bins'][0],
                    data['range_bins'][-1],
                    data['scan_timestamps'][-1] - data['scan_timestamps'][0],
-                   0))
+                   0),
+           aspect='auto')
 
 plt.xlabel('Range (m)')
 plt.ylabel('Elapsed Time (s)')
@@ -422,8 +428,8 @@ print(len(data['motion_timestamps']) == len(data['platform_pos']))
 
 # ranges = get_ranges(data)
 r1 = np.sqrt(np.sum(
-        (data['platform_pos'] - data['corner_reflector_pos'][0, :])**2, 1))
-# plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector 1')
+        (data['platform_pos'] - data['corner_reflector_pos'][0])**2, 1))
+plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector 1')
 plt.show()
 
 
