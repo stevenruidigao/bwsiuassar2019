@@ -330,7 +330,6 @@ def motion_align(data):
     newdata = data.copy()
 
     newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
-    newdata['motion_timestamps'] -= newdata['motion_timestamps'][0]
 
     # print(newdata)
 
@@ -347,7 +346,7 @@ def motion_align(data):
 
     newdata['platform_pos'] = np.column_stack((realigned_pos_x, realigned_pos_y, realigned_pos_z))
     newdata['scan_timestamps'] = newdata['scan_timestamps'] / 1000
-    newdata['motion_timestamps'] = newdata['scan_timestamps']
+    newdata['motion_timestamps'] = temp
     return newdata
 
 
@@ -369,8 +368,8 @@ def cropper(data, *ranges):
 
     # mid = int(len(scan_timestamps)/2)
 
-    # RD_change_time = scan_timestamps[RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)]
-    # MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
+    RD_change_time = scan_timestamps[RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos)]
+    MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)]
 
     mc_takeoff = MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
     mc_landing = MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos)
@@ -400,6 +399,8 @@ def cropper(data, *ranges):
     data['scan_data'] = scan_data
 
     data['platform_pos'] = platform_pos
+    motion_timestamps -= motion_timestamps[0]
+    motion_timestamps += 2
     data['motion_timestamps'] = motion_timestamps
 
     data['range_bins'] = range_bins
@@ -422,7 +423,7 @@ data = motion_align(data)
 
 data = cropper(data, 1, 15)
 
-# better_back_projection(data, 0.01, -1.5, 2.5, -2.5, 1.5)
+better_back_projection(data, 0.01, 1, 8, 1, 8)
 
 plt.imshow(np.abs(data['scan_data']),
            extent=(
@@ -457,14 +458,21 @@ plt.show()
 
 
 '''
+
 # diction = get_pos(data, "LB_Marker")
+
 data['motion_timestamps'] = data_align(data['scan_data'], data['platform_pos'], data['range_bins'],
                                        data['scan_timestamps'], data['motion_timestamps'], data['corner_reflector_pos'])
+
 data = realign_position(data)
+
 # data['motion_timestamps'] = np.linspace(data['motion_timestamps'][0], data['motion_timestamps'][-1],
 #                                         len(data['range_bins'][0]))
+
 # data['motion_timestamps'] = np.interp(data['motion_timestamps'], data['range_bins'][0], data['motion_timestamps'])
 # better_back_projection(data, 0.01, -3, 3, -3, 3)
+
+
 # print(diction['Time (Seconds)'])
 # print('\n')
 # print(diction['X'])
@@ -472,7 +480,9 @@ data = realign_position(data)
 # print(diction['Y'])
 # print('\n')
 # print(diction['Z'])
+
 # extent=(left, right, bottom, top) - Changing axis, left right are min max X, bot top are min max Y.
+
 plt.imshow(np.abs(data['scan_data']),
            extent=(
                    data['range_bins'][0, 0],
@@ -482,8 +492,12 @@ plt.imshow(np.abs(data['scan_data']),
                    
 plt.xlabel('Range (m)')
 plt.ylabel('Elapsed Time (s)')
+
+
 print(len(data['scan_data']) == len(data['platform_pos']))
+
 ranges = get_cr_ranges(data)
 plt.plot(data['platform_pos'], ranges, 'r--')
 plt.pause(5)
+
 '''
