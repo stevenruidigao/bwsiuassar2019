@@ -8,6 +8,7 @@ __maintainer__ = "Steven Gao"
 __email__ = "stevenruidigao@gmail.com"
 import pickle
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import argparse
@@ -139,7 +140,7 @@ def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, thre
 ##    print(np.abs(one_way_range - first_value))
     indices = (one_way_range != first_value).nonzero()
 ##    indices = (np.abs(one_way_range - first_value) > threshold).nonzero()
-    print(indices)
+##    print(indices)
     tkf_scan_num = indices[0][0]
     return tkf_scan_num + 1
 
@@ -161,10 +162,16 @@ def RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, thre
     first_value = one_way_range[0]
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
     num_scans = len(scan_data)
-    np.set_printoptions(threshold=np.inf)
+##    np.set_printoptions(threshold=np.inf)
 ##    print(np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]))
 ##    np.set_printoptions(threshold=1000)
 ##    return (np.abs(np.linalg.norm(scan_data - scan_data[0], axis=1)) > threshold).nonzero()[0][-1]
+##    print((np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > threshold).nonzero()[0][0])
+    plt.figure()
+##    print(scan_data[0])
+    plt.plot(scan_data[:, cr_first_rbin - 1], 'r--')
+    plt.show()
+    plt.figure()
     return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > threshold).nonzero()[0][0]
 ##    return (np.abs(np.linalg.norm(scan_data - scan_data[0], axis=1)) > threshold).nonzero()[0][0] # 11.208849086510625 
 
@@ -177,6 +184,7 @@ def RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, thre
     ##    print(np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]))
     ##    np.set_printoptions(threshold=1000)
 ##    return (np.abs(np.linalg.norm(scan_data - scan_data[0], axis=1)) > threshold).nonzero()[0][-1]
+##    print(np.abs(scan_data[1400]))
     return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > threshold).nonzero()[0][-1]
 
 def time_align(data, threshold=0.5, shift=0):
@@ -189,8 +197,6 @@ def time_align(data, threshold=0.5, shift=0):
     
     RD_change_time = scan_timestamps[RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
     MC_change_time = motion_timestamps[MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)]
-    
-##    print(RD_change_time, MC_change_time)
     
     newdata = data.copy()
     
@@ -241,9 +247,9 @@ def crop(data, start_range, end_range, threshold=0.5):
     mid = int(len(scan_timestamps) / 2)
 
 ##    rd_takeoff = mid - 30 #
-    print(RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
+##    print(RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
     rd_takeoff = RD_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
-    print(RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
+##    print(RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold))
 ##    rd_landing = mid + 30 #
     rd_landing = RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos, threshold)
 
@@ -274,36 +280,129 @@ def crop(data, start_range, end_range, threshold=0.5):
 
     return data
 
-def get_pos_data(csv_data, name):
-    return_data = tuple()
+def combine_data(motion_data, radar_data, corner_reflector):
+    data = radar_data.copy()
+    data['scan_timestamps'] = data['timestamps'] / 1000
+    data['motion_timestamps'] = motion_data['motion_timestamps']
+    data['platform_pos'] = motion_data['platform_pos']
+    data['corner_reflector_pos'] = np.asarray([corner_reflector])
+    return data
+
+
+def get_cr_pos(corner, name):
     start_index = -1
     curr = 0
-    for col in csv_data.columns:
+    for col in corner.columns:
         if col == name:
             start_index = curr
             break
         curr += 1
     start_index += 4
+    ret = np.asarray([float(corner.iloc[3, start_index]),
+           float(corner.iloc[3, start_index + 1]),
+           float(corner.iloc[3, start_index + 2])])
+    return ret
+
+
+def get_pos_data(motion, name):
+    start_index = -1
+    curr = 0
+    for col in motion.columns:
+        if col == name:
+            start_index = curr
+            break
+        curr += 1
+    start_index += 4
+    ret = dict()
+    ret['motion_timestamps'] = np.asarray(motion.iloc[3:, 1]).astype(np.float)
+    # ret['motion_timestamps'].index = range(len(ret['motion_timestamps']))
+    ret['platform_pos'] = np.column_stack((motion.iloc[3:, start_index],
+                                           motion.iloc[3:, start_index + 1],
+                                           motion.iloc[3:, start_index + 2]))
+    ret['platform_pos'] = ret['platform_pos'].astype(np.float)
+    # ret['platform_pos'].index = range(len(ret['platform_pos']))
+    return ret
+
+def display_backprojected_image(backprojected_img, x_axis_bounds, y_axis_bounds, png_filename, 
+                                x_label='X (m)', y_label='Y (m)', title='Backprojected Image', 
+                                aspect='equal'):
+    """Display and save backprojected image with labels.
     
-    x = csv_data.iloc[3:, start_index]
-    y = csv_data.iloc[3:, start_index + 1]
-    z = csv_data.iloc[3:, start_index + 2]
-    motion_timestamps = csv_data.iloc[3:, 1]
+    Args:
+        backprojected_img (numpy.ndarray)
+            Matrix containing backprojected image. Assumes that rows correspond to y-axis and 
+            columns correspond to x-axis.
+            
+        x_axis_bounds (tuple)
+            First element is the minimum/leftmost/first column's x-value while second element is the 
+            maximum/rightmost/last column's x-value. These should be in meters.
     
-    x.index = range(len(x))
-    y.index = range(len(y))
-    z.index = range(len(z))
-    motion_timestamps.index = range(len(motion_timestamps))
+        y_axis_bounds (tuple)
+            First element is the minimum/bottom/last row's y-value while second element is the 
+            maximum/top/first row's y-value. These should be in meters.
+            
+        png_filename (str)
+            Path and name of PNG file of image to save. Must include PNG extension.
+            
+        x_label (string)
+            X-axis label. Defaults to 'X (m)'.
+            
+        y_label (string)
+            Y-axis label. Defaults to 'Y (m)'
+            
+        title (string)
+            Title of image. Defaults to 'Backprojected Image'.
+            
+        aspect (string)
+            Aspect ratio of displayed image. This should be any of the options supported by
+            the 'aspect' keyword argument of matplotlib.pyplot.imshow 
+            (https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.imshow.html). Defaults to 
+            'equal' so that pixels present their true aspect ratio.
+    """
+    # Display the backprojected image
+    hFig = plt.figure()
+    hAx = plt.subplot(111)
+    hImg = hAx.imshow(backprojected_img, extent=x_axis_bounds + y_axis_bounds)
+    hAx.set_aspect(aspect=aspect)
+    hAx.set_xlabel(x_label)
+    hAx.set_ylabel(y_label)
+    hAx.set_title(title)
+    hFig.colorbar(hImg)
     
-    x = np.asarray(x)
-    y = np.asarray(y)
-    z = np.asarray(z)
-    motion_timestamps = np.asarray(motion_timestamps)
+    # maximize window before showing and saving
+    # TODO: This may need to change depending on you matplotlib backend; refer to this post for 
+    # some potential solutions, 
+    # https://stackoverflow.com/questions/32428193/saving-matplotlib-graphs-to-image-as-full-screen/32428266
+##    figManager = plt.get_current_fig_manager()
+##    figManager.window.showMaximized()
+    plt.show()
     
-    return_data[0] = np.stack((x, y, z), 1)
-    return_data[1] = motion_timestamps
+    # Save the iamge
+    hFig.savefig(png_filename)
     
-    return return_data
+def save_data_pickle(backprojected_img, x_axis, y_axis, pkl_filename):
+    """Save data into pickle.
+    
+    Args:
+        backprojected_img (numpy.ndarray)
+            Matrix containing backprojected image. Assumes that rows correspond to y-axis and 
+            columns correspond to x-axis.
+            
+        x_axis (numpy.ndarray)
+            The x-coordinates of each column in the backprojected image. These should be in meters.
+    
+        y_axis (tuple)
+            The y-coordinates of each row in the backprojected image. These should be in meters.
+            
+        pkl_filename (str)
+            Path and name of pickle file to save.
+    """
+    # Open and save pickle
+    with open(pkl_filename, 'wb') as f:
+        data = {'backprojected_img': backprojected_img,
+                'x_axis': x_axis,
+                'y_axis': y_axis}
+        pickle.dump(data, f)
 
 parser = argparse.ArgumentParser(description=" - Runs backprojection on SAR data.")
 parser.add_argument("--filename", "-f", type=str, required=True, help=" - The SAR data filename.")
@@ -316,7 +415,7 @@ parser.add_argument("--zstop", type=float, default=3, help=" - The end of the z-
 parser.add_argument("--xresolution", "--xres", type=float, default=0.05, help=" - The resolution of the SAR image.")
 parser.add_argument("--yresolution", "--yres", type=float, default=0.05, help=" - The resolution of the SAR image.")
 parser.add_argument("--zresolution", "--zres", type=float, default=0.05, help=" - The resolution of the SAR image.")
-parser.add_argument("--two_dimensional_range_bins", "--2D-range-bins",  "--2D_bins", action="store_true", help=" - Enables use of weird 2D range_bins.")
+parser.add_argument("--two_dimensional_range_bins", "--2D_range_bins",  "--2D_bins", action="store_true", help=" - Enables use of weird 2D range_bins.")
 parser.add_argument("--mode", "-m", type=str, default="2dfast", help=" - The mode to run back projection in.")
 parser.add_argument("--realign", "--align", action="store_true", help=" - Realigns the motion capture data and the radar data.")
 parser.add_argument("--realign_thresh", "--thresh", type=float, default=0.5, help=" - Realigns the motion capture data and the radar data with this threshold.")
@@ -327,6 +426,9 @@ parser.add_argument("--clim", nargs=2, help=" - Color map stuff")
 parser.add_argument("--reflectors", type=int, default=1, help=" - Number of corner reflectors")
 parser.add_argument("--replace_nans", "--nans", action="store_true", help = " - Whether or not to replace NaNs in motion capture data.")
 parser.add_argument("--range_shift", type=float, default=0, help=" - Shifts range_bins by a certain amount.")
+parser.add_argument("--use_csv", "--csv", action="store_true", help=" - Whether or not to use csv files for data.")
+parser.add_argument("--motion_csv", "--motion", default=None, help=" - The motion csv to read data from. Requires use_csv to be enabled.")
+parser.add_argument("--cr_csv", "--reflector", "--cr", default=None, help=" - The corner reflector csv to read data from. Requires use_csv to be enabled.")
 args = parser.parse_args()
 
 print(args)
@@ -334,8 +436,18 @@ print(args)
 with open(args.filename, 'rb') as f:
     data = pickle.load(f)
 
+np.set_printoptions(threshold=np.inf)
+##print(data['scan_data'][0][700:1400])
+np.set_printoptions(threshold=100)
 
-##print(data['platform_pos'])
+if args.use_csv:
+    corner_data = pd.read_csv(args.cr_csv, header=2)
+    corner_data = get_cr_pos(corner_data, 'Corner Reflector')
+    motion_data = pd.read_csv(args.motion_csv, header=2)
+    motion_data = get_pos_data(motion_data, 'Radar')
+    data = combine_data(motion_data, data, corner_data)
+
+print(data)
 
 if args.replace_nans:
     data = replace_nans(data)
@@ -346,34 +458,35 @@ if args.two_dimensional_range_bins:
 if args.realign:
     data = range_align(data, args.range_shift)
     data = time_align(data, args.realign_thresh, args.realign_shift)
-##    print(data['platform_pos'])
-    plt.imshow(np.abs(data['scan_data'])
-##        extent=(
-##            data['range_bins'][0],
-##            data['range_bins'][-1],
-##            data['scan_timestamps'][-1] - data['scan_timestamps'][0],
-##            0))
-               )
+    
+    plt.imshow(np.abs(data['scan_data']))
+    plt.show()
+    
+    plt.imshow(np.abs(data['scan_data']),
+        extent=(
+            data['range_bins'][0],
+            data['range_bins'][-1],
+            data['scan_timestamps'][-1] - data['scan_timestamps'][0],
+            0))
 
     plt.xlabel('Range (m)')
     plt.ylabel('Elapsed Time (s)')
 
-##    for refnum in range(args.reflectors):
-##        r1 = np.sqrt(np.sum(
-##                (data['platform_pos'] - data['corner_reflector_pos'][refnum, :])**2, 1))
-##        plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector' + str(refnum + 1))
+    for refnum in range(args.reflectors):
+        r1 = np.sqrt(np.sum(
+                (data['platform_pos'] - data['corner_reflector_pos'][refnum, :])**2, 1))
+        plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector' + str(refnum + 1))
         
     if args.crop is not None:
-        startx = np.zeros(int(data['scan_timestamps'][-1] - data['scan_timestamps'][0])) + float(args.crop[0])
-        starty = np.linspace(data['scan_timestamps'][0], data['scan_timestamps'][-1], int(data['scan_timestamps'][-1] - data['scan_timestamps'][0]))
-        plt.plot(startx, starty, 'r--')
-        
-        stopx = np.zeros(int(data['scan_timestamps'][-1] - data['scan_timestamps'][0])) + float(args.crop[1])
-        stopy = np.linspace(data['scan_timestamps'][0], data['scan_timestamps'][-1], int(data['scan_timestamps'][-1] - data['scan_timestamps'][0]))
-        plt.plot(stopx, stopy, 'r--')
+        ...
+##        startx = np.zeros(int(data['scan_timestamps'][-1] - data['scan_timestamps'][0])) + float(args.crop[0])
+##        starty = np.linspace(data['scan_timestamps'][0], data['scan_timestamps'][-1], int(data['scan_timestamps'][-1] - data['scan_timestamps'][0]))
+##        plt.plot(startx, starty, 'r--')
+##        
+##        stopx = np.zeros(int(data['scan_timestamps'][-1] - data['scan_timestamps'][0])) + float(args.crop[1])
+##        stopy = np.linspace(data['scan_timestamps'][0], data['scan_timestamps'][-1], int(data['scan_timestamps'][-1] - data['scan_timestamps'][0]))
+##        plt.plot(stopx, stopy, 'r--')
     plt.show()
-
-##print(data["platform_pos"], data["platform_pos"].shape)
 
 if args.crop is not None:
     data = crop(data, float(args.crop[0]), float(args.crop[1]), args.realign_thresh)
@@ -381,23 +494,22 @@ if args.crop is not None:
 if args.normalize:
     data = range_norm(data)
 
-##print(data)
-
 bpdat = backprojection(data, args.xstart, args.xstop, args.ystart, args.ystop, args.zstart, args.zstop, args.xresolution, args.yresolution, args.zresolution, args.mode)
-##print(bpdat)
-##print(bpdat.shape)
-##print(data["platform_pos"], data["platform_pos"].shape, data['scan_timestamps'])
+display_backprojected_image(bpdat, (args.xstart, args.xstop), (args.ystop, args.ystart), args.filename + ".png", "Z (m)", "X (m)", "Backprojected Image", "equal")
 
-plt.xlabel('X (m)')
-plt.ylabel('Z (m)')
-plt.imshow(bpdat,
-    extent=(
-        args.xstart,
-        args.xstop,
-        args.ystop,
-        args.ystart))
-##plt.clim(100)
-plt.colorbar()
-##plt.plot(data['platform_pos'][:, 0], data['platform_pos'][:, 1], 'r-')
-plt.show()
+xlen = int((args.xstop - args.xstart) / args.xresolution) + 1
+ylen = int((args.ystop - args.ystart) / args.yresolution) + 1
+save_data_pickle(bpdat, np.linspace(args.xstart, args.xstop, xlen), tuple(np.linspace(args.ystart, args.ystop, ylen)), args.filename + ".bpdat")
+##plt.xlabel('X (m)')
+##plt.ylabel('Z (m)')
+##plt.imshow(bpdat,
+##    extent=(
+##        args.xstart,
+##        args.xstop,
+##        args.ystop,
+##        args.ystart))
+####plt.clim(100)
+##plt.colorbar()
+####plt.plot(data['platform_pos'][:, 0], data['platform_pos'][:, 1], 'r-')
+##plt.show()
 
