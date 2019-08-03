@@ -291,20 +291,25 @@ GUI code begins here
 '''
 
 import tkinter as tk
-   
+from tkinter import *
+import tkinter.font as font
+
 #creates window of GUI
 window = tk.Tk()
 frame = tk.Frame(window)
 frame.pack()
 
 window.title("Alignment GUI")
-window.geometry("200x200")
+window.geometry("400x400")
+
+#creates font structure
+times18 = font.Font(family='Times New Roman', size=18)
 
 #creates buttons
-data_lab = tk.Button(frame, text="Combine data", fg="blue", command = lambda: combine_data(motion_data, radar_data, get_cr_pos(corner_data, 'Corner Reflector')))
-mo_nans_lab = tk.Button(frame, text="Motion align combine with nans", fg="green", command = lambda: combine_mo_nans(data))
-crop_lab = tk.Button(frame, text="Crop", fg="red", command = lambda: cropper(data, 1, 15))
-backproj_lab = tk.Button(frame, text="Back projection", fg="orange", command = lambda: better_back_projection(data, 0.01, -1.5, 2.5, -2.5, 1.5))
+data_lab = tk.Button(frame, text="Combine data", font = times18, fg="blue", command = lambda: combine_data(motion_data, radar_data, get_cr_pos(corner_data, 'Corner Reflector')))
+mo_nans_lab = tk.Button(frame, text="Motion align combine with nans", font = times18, fg="green", command = lambda: combine_mo_nans(data))
+crop_lab = tk.Button(frame, text="Crop", font = times18, fg="red", command = lambda: cropper(data, 1, 15))
+backproj_lab = tk.Button(frame, text="Back projection", font = times18, fg="orange", command = lambda: better_back_projection(data, 0.01, -1.5, 2.5, -2.5, 1.5))
 
 #shows buttons
 data_lab.pack(fill = tk.BOTH)
