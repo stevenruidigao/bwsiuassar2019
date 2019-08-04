@@ -1,4 +1,3 @@
-#imports desired libs
 import pickle
 import numpy as np
 import matplotlib as mpl
@@ -12,27 +11,28 @@ if Path("..//").resolve().as_posix() not in sys.path:
     sys.path.insert(0, Path("..//").resolve().as_posix())
 from common.helper_functions import replace_nan
 
-corner = 'Corner Reflector.csv'
-motion = 'Team 5 Take One.csv'
-radar = 'Aug1_First_Flight'
 
-#defines cariables to read the csv containg necessary data
+corner = 'Corner Reflector.csv'
+motion = 'FinalTestDay_1.csv'
+radar = 'FinalTestDay_1'
+
+
 corner_data = pd.read_csv(corner, header=2)
 motion_data = pd.read_csv(motion, header=2)
 
 with open(radar, 'rb') as f:
     radar_data = pickle.load(f)
 
-#combines motion capture data and radar data and corner reflector positions
+
 def combine_data(motion_data, radar_data, corner_reflector):
     data = radar_data.copy()
     data['scan_timestamps'] = data['timestamps']
     data['motion_timestamps'] = motion_data['motion_timestamps']
     data['platform_pos'] = motion_data['platform_pos']
-    data['corner_reflector_pos'] = [corner_reflector]
+    data['corner_reflector_pos'] = corner_reflector
     return data
 
-#determines the positions of the corner reflectors
+
 def get_cr_pos(corner, name):
     start_index = -1
     curr = 0
@@ -47,7 +47,7 @@ def get_cr_pos(corner, name):
            float(corner.iloc[3, start_index + 2]))
     return ret
 
-#goes through mocap csv, gets the array of platform positions
+
 def get_pos(motion, name):
     start_index = -1
     curr = 0
@@ -67,7 +67,7 @@ def get_pos(motion, name):
     # ret['platform_pos'].index = range(len(ret['platform_pos']))
     return ret
 
-#determines the index at which the drone starts moving
+
 def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     max = len(platform_pos)
     rng = range(max)
@@ -79,7 +79,6 @@ def MC_tkf_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     return 0
 
 
-#determines the index at which the drone lands
 def MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     max = len(platform_pos)
     rng = range(max)
@@ -91,14 +90,14 @@ def MC_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     return 0
 
 
-#finds the time stamp at which the drone takes off relative to the radar's timer
+# function within a function; finds the time stamp at which the drone takes off relative to the radar's timer
 def RD_tkf_indexn(scan_data, platform_pos, range_bins, corner_reflector_pos):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - (corner_reflector_pos[0])), axis=1))
     first_value = one_way_range[0]
     cr_first_rbin = np.argmin(np.abs(first_value - range_bins))
     return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > 1000).nonzero()[0][0]
 
-#finds the time stamp at which the drone lands relative to radar's timer
+
 def RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     one_way_range = np.sqrt(np.sum(np.square(platform_pos - corner_reflector_pos[0]), axis=1))
     first_value = one_way_range[0]
@@ -106,7 +105,6 @@ def RD_lnd_index(scan_data, platform_pos, range_bins, corner_reflector_pos):
     return (np.abs(scan_data[:, cr_first_rbin] - scan_data[0, cr_first_rbin]) > 5).nonzero()[0][-1]
 
 
-#creates back projection of data
 def better_back_projection(data, resolution, xstart, xstop, ystart, ystop):
     fig = plt.figure()
 
@@ -168,7 +166,7 @@ def better_back_projection(data, resolution, xstart, xstop, ystart, ystop):
     plt.pause(5)
     return np.abs(ret)
 
-#aligns data of motion capture and radar
+
 def motion_align(data):
     scan_data = data['scan_data']
     platform_pos = data['platform_pos']
@@ -177,7 +175,6 @@ def motion_align(data):
     motion_timestamps = data['motion_timestamps']
     scan_timestamps = data['scan_timestamps']
 
-    #makes a copy of data so original data can remain untouched
     newdata = data.copy()
 
     newdata['scan_timestamps'] -= newdata['scan_timestamps'][0]
@@ -198,7 +195,7 @@ def motion_align(data):
     newdata['motion_timestamps'] = temp
     return newdata
 
-#interpolates across csv to remove small nan errors
+
 def replace_nans(data):
     newdata = data.copy()
     replacement_data = replace_nan(newdata['motion_timestamps'], newdata['platform_pos'])
@@ -207,7 +204,6 @@ def replace_nans(data):
     return newdata
 
 
-#crops irrelevant data in backprojection to show only necessary parts
 def cropper(data, *ranges):
     scan_data = data['scan_data']
     platform_pos = data['platform_pos']
@@ -244,18 +240,20 @@ def cropper(data, *ranges):
 
     data['platform_pos'] = platform_pos
     motion_timestamps -= motion_timestamps[0]
-    motion_timestamps += 2
+    motion_timestamps += 15.2
     data['motion_timestamps'] = motion_timestamps
 
+    range_bins -= 0.5
     data['range_bins'] = range_bins
 
     return data
 
-#shows data to user, calls all functions and methods in the right order to form image correctly
+
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 motion_data = get_pos(motion_data, 'Radar')
-data = combine_data(motion_data, radar_data, get_cr_pos(corner_data, 'Corner Reflector'))
+corner = [[-3.94, 0.36, 0.63], [1.59, 0.22, -1.85]]
+data = combine_data(motion_data, radar_data, corner)
 
 
 data = replace_nans(data)
@@ -267,7 +265,7 @@ data = motion_align(data)
 
 data = cropper(data, 1, 20)
 
-better_back_projection(data, 0.01, 1, 8, 1, 8)
+better_back_projection(data, 0.01, -5, -2, -1, 2)
 
 plt.imshow(np.abs(data['scan_data']),
            extent=(
@@ -285,32 +283,3 @@ r1 = np.sqrt(np.sum(
                    (data['platform_pos'] - data['corner_reflector_pos'][0])**2, 1))
 plt.plot(r1, data['motion_timestamps'], 'r--', label='Corner Reflector 1')
 plt.show()
-'''
------------------------------------------------------------------------------
-GUI code begins here
-'''
-
-import tkinter as tk
-   
-#creates window of GUI
-window = tk.Tk()
-frame = tk.Frame(window)
-frame.pack()
-
-window.title("Alignment GUI")
-window.geometry("200x200")
-
-#creates buttons
-data_lab = tk.Button(frame, text="Combine data", fg="blue", command = lambda: combine_data(motion_data, radar_data, get_cr_pos(corner_data, 'Corner Reflector')))
-crop_lab = tk.Button(frame, text="Crop", fg="red", command = lambda: cropper(data, 1, 15))
-mo_nans_lab = tk.Button(frame, text="Motion align combine with nans", fg="green", command = lambda: combine_mo_nans(data))
-backproj_lab = tk.Button(frame, text="Back projection", fg="orange", command = lambda: better_back_projection(data, 0.01, -1.5, 2.5, -2.5, 1.5))
-
-#shows buttons
-data_lab.pack(fill = tk.BOTH)
-crop_lab.pack(fill = tk.BOTH)
-mo_nans_lab.pack(fill = tk.BOTH)
-backproj_lab.pack(fill = tk.BOTH)
-
-#is run when the GUI window is closed
-window.mainloop()
