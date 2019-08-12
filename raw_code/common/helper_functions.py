@@ -127,13 +127,13 @@ def deconflict_file(filename):
     """
     filename = Path(filename)
     if not filename.exists():
+        filename.touch()
         return filename.resolve().as_posix()
     else:
         ii = 0
         while filename.with_name('{0}_{1}{2}'.format(filename.stem, ii, filename.suffix)).exists():
             ii += 1
-        return filename.with_name(
-                '{0}_{1}{2}'.format(filename.stem, ii, filename.suffix)).resolve().as_posix()
+        return filename.with_name('{0}_{1}{2}'.format(filename.stem, ii, filename.suffix)).resolve().as_posix()
 
 def yes_or_no(question):
     """Prompts user to answer a "Yes or No" question through keyboard input.

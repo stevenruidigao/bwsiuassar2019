@@ -290,7 +290,7 @@ class PulsON440:
         """
         # Try to disconnect from radar if needed
         if not self.connected:
-            self.logger.info('Cnnnot disconnect, no radar connected!')
+            self.logger.info('Cannnot disconnect, no radar connected!')
         else:
             self.logger.info('Trying to disconnect from radar...')
             try:
@@ -686,7 +686,7 @@ class PulsON440:
             
         return scan_data
     
-        def status_check(self):
+    def status_check(self):
         """ Determines the status of the radar.
 
         Args:
@@ -716,17 +716,18 @@ class PulsON440:
                     payload = self.decode_radar_to_host_message(message, MRM_GET_STATUSINFO_CONFIRM)
                     status_flag = payload['status']
                     bit_test_flag = payload['bit_test']
+                    print(status_flag, bit_test_flag)
                     break
                 except:
                     pass
             if status_flag == -1 and bit_test_flag == -1:
                 raise RuntimeError('Radar status request timed out.')
-            elif status_flag != 0:
-                raise RuntimeError(('Status non-zero with the value ' +
-                                    '{0}!').format(status_flag))
-            elif bit_test_flag != 0:
-                raise RuntimeError(('BIT Test non-zero with the value ' +
-                                    '{0}!').format(bit_test_flag))
+##            elif status_flag != 0:
+##                raise RuntimeError(('Status non-zero with the value ' +
+##                                    '{0}!').format(status_flag))
+##            elif bit_test_flag != 0:
+##                raise RuntimeError(('BIT Test non-zero with the value ' +
+##                                    '{0}!').format(bit_test_flag))
             self.logger.info('Radar in full working order!')
             return True
         return None

@@ -10,6 +10,7 @@ __email__ = "ramamurthy.bhagavatula@ll.mit.edu"
 # Update path
 from pathlib import Path
 import sys
+import datetime
 if Path("..//").resolve().as_posix() not in sys.path:
     sys.path.insert(0, Path("..//").resolve().as_posix())
 
@@ -54,11 +55,12 @@ def parse_args(args):
     
     # The next four lines add the arguments that we listed as necessary and adds them to the parser along with their type
     # to tell the parser to look for them
-    parser.add_argument("settings_file", type=str, help=" - path name of settings file, type str") # Path name of the radar settings file
-    parser.add_argument("scan_data_filename", type=str, help=" - path name of preferred doc to save scanned data, type str") # Path name for the document that we want to save the data in
-    parser.add_argument("scan_count", type=int, help=" - number of scans desired, type int") # Number of scans that we want to take
-    parser.add_argument("collect_mode", type=str, default="collect", help=" - collection mode, quicklook or collect") # Collection mode; quicklook or collect
+    parser.add_argument("--settings_file", type=str, default="radar_settings.yml", help=" - path name of settings file, type str") # Path name of the radar settings file
+    parser.add_argument("--scan_data_filename", type=str, default=datetime.datetime.now().strftime("%d-%b-%Y-(%H-%M-%S.%f).out"), help=" - path name of preferred doc to save scanned data, type str") # Path name for the document that we want to save the data in
+    parser.add_argument("--scan_count", type=int, default=None, help=" - number of scans desired, type int") # Number of scans that we want to take
+    parser.add_argument("--collect_mode", type=str, default="collect", help=" - collection mode, quicklook or collect") # Collection mode; quicklook or collect
     parser.add_argument("--return_data", "--return", action="store_true", help=" - OPTIONAL, can return data to save in a variable") # Whether or not we want to return the data to save it in a variable; OPTIONAL
+    parser.add_argument("--status-check", type=bool, default=True, help=" - runs a status check on the radar")
     parsed_args = parser.parse_args(args) # Go through args, find the arguments, and save them into parsed_args
     
     # List of arguments needed
@@ -110,8 +112,13 @@ def main(args):
         radar.connect()
         radar.read_settings_file(settings_file=parsed_args.settings_file)
         radar.set_radar_config()
+        if parsed_args.status_check and radar.status_check():
+            print("Radar is OK!")
         if parsed_args.collect_mode == "collect":
-            data = radar.collect(scan_count=parsed_args.scan_count, scan_data_filename=parsed_args.scan_data_filename, return_data=parsed_args.return_data)#Insert arguments)
+            if parsed_args.scan_count == None:
+                data = radar.collect(scan_data_filename=deconflict_file(parsed_args.scan_data_filename), return_data=parsed_args.return_data)
+            else:
+                data = radar.collect(scan_count=parsed_args.scan_count, scan_data_filename=deconflict_file(parsed_args.scan_data_filename), return_data=parsed_args.return_data)#Insert arguments)
         elif parsed_args.collect_mode == "quick":
             data = radar.quick_look(scan_data_filename=parsed_args.scan_data_filename, return_data=parsed_args.return_data)
         else:

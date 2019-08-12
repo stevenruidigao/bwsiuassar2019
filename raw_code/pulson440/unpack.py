@@ -98,7 +98,7 @@ def unpack(scan_data_filename):
         
         # Read configuration part of data
         config = read_config_data(f)
-
+        
         # Compute range bins in datas
         scan_start_time = float(config['scan_start'])
         start_range = SPEED_OF_LIGHT * ((scan_start_time * 1e-12) - DT_0 * 1e-9) / 2
@@ -111,7 +111,6 @@ def unpack(scan_data_filename):
                 'range_bins': None,
                 'packet_idx': [],
                 'config': config}
-        single_scan_data = []
         packet_count = 0
         pulse_count = 0
         
@@ -123,41 +122,42 @@ def unpack(scan_data_filename):
 
             if len(packet) < MAX_SCAN_INFO_PACKET_SIZE:
                 break            
+            packet_count += 1
             
             # Get information from first packet about how scans are stored and range bins collected
-            if packet_count == 0:
+            if packet_count == 1:
                 num_range_bins = np.frombuffer(packet[44:48], dtype='>u4')[0]
                 num_packets_per_scan = np.frombuffer(packet[50:52], dtype='>u2')[0]
                 drange_bins = SPEED_OF_LIGHT * T_BIN * 1e-9 / 2
                 range_bins = (start_range + drange_bins * np.arange(0, num_range_bins, 1))
-            
-            # Number of samples in current packet, timestamp, and packet index
-            num_samples = np.frombuffer(packet[42:44], dtype='>u2')[0]
-            timestamp = np.frombuffer(packet[8:12], dtype='>u4')[0]
+                num_samples_per_packet_idx = [None] * num_packets_per_scan
+                
+            # Check if new pulse is being assembled either because of completion of current scan or
+            # dropped packets
             data['packet_idx'].append(np.frombuffer(packet[48:50], dtype='>u2')[0])
-            
-            # Extract radar data samples from current packet; process last packet within a scan 
-            # seperately to get all data
-            packet_data = np.frombuffer(packet[52:(52 + 4 * num_samples)], dtype='>i4')
-            single_scan_data.append(packet_data)
-            packet_count += 1
-            
-            if packet_count % num_packets_per_scan == 0:
-                data['scan_data'].append(np.concatenate(single_scan_data))
-                data['timestamps'].append(timestamp)
-                single_scan_data = []
+            if packet_count == 1:
+                data['scan_data'].append([None] * num_packets_per_scan)
+                data['timestamps'].append(np.frombuffer(packet[8:12], dtype='>u4')[0])
                 pulse_count += 1
-
-        # Add last partial scan if present
-        if single_scan_data:
-            single_scan_data = np.concatenate(single_scan_data)
-            num_pad = data['scan_data'][0].size - single_scan_data.size
-            single_scan_data = np.pad(single_scan_data, (0, num_pad), 'constant', constant_values=0)
-            data['scan_data'].append(single_scan_data)
-            data['timestamps'].append(timestamp)
-            pulse_count += 1
+            elif data['packet_idx'][-1] <= data['packet_idx'][-2]:
+                data['scan_data'].append([None] * num_packets_per_scan)
+                data['timestamps'].append(np.frombuffer(packet[8:12], dtype='>u4')[0])
+                pulse_count += 1
             
-        # Stack scan data into 2-D array (rows -> pulses, columns -> range bins)
+            # Extract radar data samples and timestampe from current packet
+            num_samples = np.frombuffer(packet[42:44], dtype='>u2')[0]
+            data['scan_data'][-1][data['packet_idx'][-1]] = \
+                np.frombuffer(packet[52:(52 + 4 * num_samples)], dtype='>i4')
+                
+            if pulse_count == 1:
+                num_samples_per_packet_idx[data['packet_idx'][-1]] = num_samples
+                
+        # Assemble scan data as a single matrix
+        for pulse_idx in range(len(data['scan_data'])):
+            data['scan_data'][pulse_idx] = np.concatenate(
+                    [packet_data if packet_data is not None 
+                     else np.zeros(num_samples_per_packet_idx[ii], dtype=np.int32) 
+                     for ii, packet_data in enumerate(data['scan_data'][pulse_idx])])
         data['scan_data'] = np.stack(data['scan_data'])
         
         # Finalize entries in data
